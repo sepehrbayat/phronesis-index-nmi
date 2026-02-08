@@ -1,0 +1,158 @@
+\subsection{Practitioner's Checklist: Applying the Method}
+\label{sec:checklist}
+
+Before presenting the mathematical foundations, we provide a practical checklist for applying the Phronesis Index to a new system. This checklist distills the method into actionable steps, clarifying what domain expertise is required and what can be automated.
+
+\paragraph{Step 1: Define the Graph}
+
+\textbf{Question:} What are the agents/entities, and how do they interact?
+
+\textbf{Action:} Construct a graph $G = (V, E)$ where:
+\begin{itemize}
+    \item \textbf{Vertices $V$:} Represent agents, states, or entities in your system.
+    \begin{itemize}
+        \item Multi-agent system: vertices = agents
+        \item Reinforcement learning: vertices = states in the state space
+        \item Sensor network: vertices = sensors or measurement locations
+    \end{itemize}
+    
+    \item \textbf{Edges $E$:} Represent relationships, communication links, or transitions.
+    \begin{itemize}
+        \item Multi-agent system: edges = communication links (who talks to whom)
+        \item Reinforcement learning: edges = state transitions (which states are reachable)
+        \item Sensor network: edges = spatial proximity (which sensors should agree)
+    \end{itemize}
+\end{itemize}
+
+\textbf{Expertise required:} Domain knowledge to identify relevant entities and relationships.
+
+\textbf{Can be automated:} Partially. For RL, transitions can be extracted from experience replay. For sensor networks, proximity graphs can be computed from GPS coordinates.
+
+\paragraph{Step 2: Define Stalks (Local Information)}
+
+\textbf{Question:} What information does each vertex hold?
+
+\textbf{Action:} For each vertex $v$, define a stalk $\mathcal{F}(v) = \mathbb{R}^d$ representing the local information at $v$:
+\begin{itemize}
+    \item Multi-agent system: $d = 2$ (2D position), $d = 3$ (3D position), or $d = k$ (belief vector)
+    \item Reinforcement learning: $d = |A|$ (Q-values for $|A|$ actions)
+    \item Sensor network: $d = m$ (measurements of $m$ quantities, e.g., temperature, pressure)
+\end{itemize}
+
+\textbf{Expertise required:} Understanding what variables are relevant to consistency.
+
+\textbf{Can be automated:} No. This requires semantic understanding of the domain.
+
+\paragraph{Step 3: Define Restriction Maps (Consistency Constraints)}
+
+\textbf{Question:} How should information be consistent across edges?
+
+\textbf{Action:} For each edge $e = (u, v)$, define restriction maps $r_{e,u}, r_{e,v}: \mathbb{R}^d \to \mathbb{R}^d$ encoding the consistency constraint:
+\begin{itemize}
+    \item \textbf{Identity (agreement):} $r_{e,v}(x) = x$. Meaning: "Vertices $u$ and $v$ should have identical information."
+    \begin{itemize}
+        \item Example: Agents sharing a global coordinate frame should report the same target location.
+    \end{itemize}
+    
+    \item \textbf{Transformation (coordinate change):} $r_{e,v}(x) = R x + t$. Meaning: "Vertex $v$'s information should match $u$'s after applying transformation $(R, t)$."
+    \begin{itemize}
+        \item Example: Robots with different orientations should report positions that match after rotation.
+    \end{itemize}
+    
+    \item \textbf{Constraint (dynamic consistency):} $r_{e,s}(Q) = Q[a]$, $r_{e,s'}(Q) = \gamma \max_{a'} Q[a']$. Meaning: "Q-values should satisfy the Bellman equation."
+    \begin{itemize}
+        \item Example: In RL, Q-values at state $s$ and successor state $s'$ should be consistent via the Bellman backup.
+    \end{itemize}
+\end{itemize}
+
+\textbf{Expertise required:} Deep domain knowledge to define semantically meaningful consistency.
+
+\textbf{Can be automated:} No. This is the core design challenge and currently requires human insight. Automated learning of restriction maps from data is an open problem (see the Discussion section of the main manuscript).
+
+\paragraph{Step 4: Estimate Noise Level}
+
+\textbf{Question:} How noisy is the system?
+
+\textbf{Action:} Estimate the noise level $\sigma$ from:
+\begin{itemize}
+    \item \textbf{Sensor datasheets:} GPS error, accelerometer drift, etc.
+    \item \textbf{Empirical measurements:} Standard deviation of repeated observations under controlled conditions.
+    \item \textbf{Communication error rates:} Bit error rate, packet loss rate.
+    \item \textbf{Model mismatch:} Expected discrepancy between assumed and true dynamics.
+\end{itemize}
+
+If $\sigma$ is unknown, use Procedure 1 (spectral gap estimation) in Section~\ref{sec:parameter_selection} to adaptively choose $\epsilon$.
+
+\textbf{Expertise required:} System characterization or calibration data.
+
+\textbf{Can be automated:} Partially. Online noise estimation from data is possible but requires careful statistical methods.
+
+\paragraph{Step 5: Choose Threshold $\epsilon$}
+
+\textbf{Question:} What threshold separates "near-zero" from "positive" eigenvalues?
+
+\textbf{Action:} Use one of the procedures in Section~\ref{sec:parameter_selection}:
+\begin{itemize}
+    \item \textbf{Procedure 1 (recommended):} Spectral gap estimation. Automatically adapts to system structure.
+    \item \textbf{Procedure 2:} Noise-adaptive. Use if $\sigma$ is known: $\epsilon = 4\sigma$.
+\end{itemize}
+
+\textbf{Expertise required:} None (procedures are algorithmic).
+
+\textbf{Can be automated:} Yes.
+
+\paragraph{Step 6: Compute Phronesis Index}
+
+\textbf{Question:} What is the consistency state of the system?
+
+\textbf{Action:} Run the STPGC algorithm (Algorithm~1 in the main manuscript) with the graph, stalks, restriction maps, and $\epsilon$ from Steps 1-5. The output is:
+\begin{itemize}
+    \item $\Phi$: Phronesis Index (scalar health metric)
+    \item $h^1_{\epsilon}$: Approximate number of topological holes (inconsistency count)
+    \item $\lambda_1^+$: Smallest positive eigenvalue (consensus strength)
+\end{itemize}
+
+\textbf{Expertise required:} None (algorithm is fully specified).
+
+\textbf{Can be automated:} Yes.
+
+\paragraph{Summary: What Can and Cannot Be Automated}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Step} & \textbf{Requires Expertise?} & \textbf{Can Be Automated?} \\
+\midrule
+1. Define graph & Yes (domain knowledge) & Partially \\
+2. Define stalks & Yes (semantic understanding) & No \\
+3. Define restriction maps & Yes (deep domain knowledge) & No \\
+4. Estimate noise & Moderate (calibration) & Partially \\
+5. Choose $\epsilon$ & No (algorithmic) & Yes \\
+6. Compute $\Phi$ & No (algorithmic) & Yes \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Key insight:} Steps 1-3 (sheaf design) require human expertise and are the main barrier to widespread adoption. Steps 4-6 (computation) are fully algorithmic. Future work on automated sheaf learning (see the Discussion section of the main manuscript) aims to reduce the expertise required for Steps 2-3.
+
+\paragraph{Example Walkthrough: Multi-Robot Coordination}
+
+\textbf{System:} 10 robots navigating a warehouse, sharing position estimates.
+
+\textbf{Step 1 (Graph):} Vertices = 10 robots. Edges = communication links (robots within 5 meters can communicate).
+
+\textbf{Step 2 (Stalks):} $\mathcal{F}(v) = \mathbb{R}^2$ (2D position in robot $v$'s local coordinate frame).
+
+\textbf{Step 3 (Restrictions):} For edge $e = (u, v)$, if robot $u$ is rotated by $\theta$ relative to $v$:
+\begin{equation}
+r_{e,u} = \begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}, \quad r_{e,v} = I_2
+\end{equation}
+Meaning: "Robot $u$'s position (in its frame) should match robot $v$'s position (in $v$'s frame) after rotation."
+
+\textbf{Step 4 (Noise):} GPS error $\sigma = 0.1$ meters (from datasheet).
+
+\textbf{Step 5 (Threshold):} Use Procedure 2: $\epsilon = 4\sigma = 0.4$ meters.
+
+\textbf{Step 6 (Compute):} Run STPGC. Typical output: $\Phi \approx 50$ (healthy), $h^1_{\epsilon} = 0$ (no inconsistencies), $\lambda_1^+ \approx 20$ (strong coupling).
+
+If one robot's GPS malfunctions, $\Phi$ drops to $\approx 5$, $h^1_{\epsilon}$ increases to $1$, triggering recalibration.

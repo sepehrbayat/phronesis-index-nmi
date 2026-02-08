@@ -27,6 +27,9 @@ code/multi_robot/results/
 code/scalability/results/
 results/
 
+# Build output
+dist/
+
 # OS files
 .DS_Store
 Thumbs.db

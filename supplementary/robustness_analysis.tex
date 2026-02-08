@@ -1,7 +1,8 @@
 % Robustness Analysis and Noise Handling
 % Addressing Reviewer 2's Concerns about Practical Deployment
 
-% Section header declared in main_manuscript.tex
+\section{Robustness Analysis}
+\label{sec:robustness}
 
 Real-world multi-agent systems operate in noisy, uncertain environments. This section analyzes the robustness of the Phronesis Index to various sources of noise and provides practical strategies for maintaining accuracy under adverse conditions.
 
@@ -409,7 +410,7 @@ Noise $\sigma$ & Fixed $\epsilon$ & Gap-based & Adaptive \\
 \begin{enumerate}
     \item \textbf{Estimate Noise Level:} Before deployment, characterize the noise in your system (e.g., via test data or simulation).
     
-    \item \textbf{Choose $\epsilon$ Adaptively:} Use the spectral gap method (Section~\ref{sec:epsilon_procedure}) rather than a fixed threshold.
+    \item \textbf{Choose $\epsilon$ Adaptively:} Use the spectral gap method (Section~\ref{sec:parameter_selection}) rather than a fixed threshold.
     
     \item \textbf{Preprocess Data:} Apply spatial averaging or median filtering to reduce noise before constructing the sheaf.
     

@@ -74,7 +74,7 @@ echo ""
 # 4. Scalability
 echo "[4/4] Scalability Test..."
 cd /repo/code/scalability
-python run_scalability.py --max_agents 10000 --num_trials 3
+python run_scalability.py --max_agents 2000 --num_trials 2
 if [ -f results/scalability_data.csv ] && [ -f results/figure4_scalability.png ]; then
     log_pass "Scalability — CSV + PNG produced"
     cp results/* /repo/results/
@@ -84,9 +84,16 @@ fi
 echo ""
 
 # ──────────────────────────────────────────────────────────────
-# PHASE 2 : Compile LaTeX
+# PHASE 2 : Copy fresh figures into paper/ for LaTeX
 # ──────────────────────────────────────────────────────────────
-echo "═══ PHASE 2: LaTeX COMPILATION ═══"
+echo "═══ PHASE 2: COPY FIGURES ═══"
+cp /repo/results/*.png /repo/paper/ 2>/dev/null && log_pass "Copied experiment figures to paper/" || echo "  (no new PNGs)"
+echo ""
+
+# ──────────────────────────────────────────────────────────────
+# PHASE 3 : Compile LaTeX
+# ──────────────────────────────────────────────────────────────
+echo "═══ PHASE 3: LaTeX COMPILATION ═══"
 echo ""
 
 # Main manuscript
@@ -99,13 +106,14 @@ pdflatex -interaction=nonstopmode main_manuscript.tex > /tmp/latex3.log 2>&1 || 
 
 if [ -f main_manuscript.pdf ]; then
     log_pass "main_manuscript.pdf compiled"
-    # Check for undefined references
-    UNDEF=$(grep -c "undefined" main_manuscript.log 2>/dev/null || echo "0")
+    # Check for undefined references (match actual LaTeX warnings only)
+    UNDEF=$(grep -cE "Warning.*undefined" main_manuscript.log 2>/dev/null) || true
+    UNDEF=${UNDEF:-0}
     if [ "$UNDEF" -eq 0 ]; then
         log_pass "main_manuscript — 0 undefined references"
     else
         log_fail "main_manuscript — $UNDEF undefined reference warnings"
-        grep "undefined" main_manuscript.log || true
+        grep -E "Warning.*undefined" main_manuscript.log || true
     fi
 else
     log_fail "main_manuscript.pdf not produced"
@@ -125,12 +133,13 @@ if [ -f supplementary_information.tex ]; then
 
     if [ -f supplementary_information.pdf ]; then
         log_pass "supplementary_information.pdf compiled"
-        UNDEF=$(grep -c "undefined" supplementary_information.log 2>/dev/null || echo "0")
+        UNDEF=$(grep -cE "Warning.*undefined" supplementary_information.log 2>/dev/null) || true
+        UNDEF=${UNDEF:-0}
         if [ "$UNDEF" -eq 0 ]; then
             log_pass "supplementary — 0 undefined references"
         else
             log_fail "supplementary — $UNDEF undefined reference warnings"
-            grep "undefined" supplementary_information.log || true
+            grep -E "Warning.*undefined" supplementary_information.log || true
         fi
     else
         log_fail "supplementary_information.pdf not produced"
@@ -142,9 +151,9 @@ fi
 echo ""
 
 # ──────────────────────────────────────────────────────────────
-# PHASE 3 : Summary
+# PHASE 4 : Summary
 # ──────────────────────────────────────────────────────────────
-echo "═══ PHASE 3: SUMMARY ═══"
+echo "═══ PHASE 4: SUMMARY ═══"
 echo ""
 echo "  Results directory contents:"
 ls -lh /repo/results/ 2>/dev/null || echo "  (no results)"

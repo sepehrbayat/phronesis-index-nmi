@@ -93,8 +93,8 @@ Figure~\ref{fig:logic_maze_timeseries} shows the time series of $\Phi$ before an
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.9\textwidth]{figure_logic_maze_comparison.png}
-\caption{Time series comparison of anomaly detection methods in Logic Maze. (Top) Phronesis Index $\Phi$ drops sharply at $t=50$ when contradiction is injected. (Middle) SAT solver output (binary: SAT/UNSAT). (Bottom) Cycle detection output (number of detected cycles). Shaded region indicates anomaly period. $\Phi$ provides a continuous signal that degrades gracefully, while binary methods produce abrupt transitions.}
+\includegraphics[width=0.9\textwidth]{figure1_timeseries.png}
+\caption{Time series of the Phronesis Index $\Phi$ in the Logic Maze experiment. $\Phi$ drops sharply at $t=50$ when a contradiction is injected into the constraint network, and recovers when the anomaly is removed. Shaded region shows $\pm 1$ standard deviation over 10 independent runs. The continuous signal enables early warning before complete system failure.}
 \label{fig:logic_maze_timeseries}
 \end{figure}
 

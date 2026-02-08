@@ -1,0 +1,68 @@
+% REVISED THEOREMS WITH EXPLICIT VARIABLE DEFINITIONS
+
+\begin{theorem}[Spectral-Cohomological Correspondence]
+\label{thm:spectral_cohomology}
+Let $\mathcal{F}$ be a cellular sheaf on a connected graph $G = (V, E)$ with $N = |V|$ vertices. Let $\mathcal{L} \in \mathbb{R}^{Nd \times Nd}$ be the Connection Laplacian, where $d$ is the stalk dimension. Then:
+\begin{equation}
+h^1_{\text{true}} = \dim(\ker(\mathcal{L})) - 1
+\end{equation}
+where $\dim(\ker(\mathcal{L}))$ is the multiplicity of the zero eigenvalue of $\mathcal{L}$, and $h^1_{\text{true}} = \dim(H^1(\mathcal{F}))$ is the true first cohomology dimension.
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+By the fundamental theorem of sheaf cohomology \cite{singer2012vector}, the kernel of $\mathcal{L}$ decomposes as $\ker(\mathcal{L}) \cong H^0(\mathcal{F}) \oplus H^1(\mathcal{F})$. Since $G$ is connected, $\dim(H^0(\mathcal{F})) = 1$ (constant global sections). Thus $\dim(\ker(\mathcal{L})) = 1 + h^1_{\text{true}}$. Rearranging gives the result. See the main manuscript (Appendix~A) for the full proof. \qed
+\end{proof}
+
+\begin{theorem}[Error Bound for Spectral Approximation]
+\label{thm:error_bound}
+Let $\mathcal{L}_0 \in \mathbb{R}^{Nd \times Nd}$ be the ideal Connection Laplacian for a graph with $N$ vertices and stalk dimension $d$. Let $\mathcal{L} = \mathcal{L}_0 + E$ be a perturbed version with $\|E\|_2 \leq \sigma$, where $\sigma > 0$ is the noise level and $\|\cdot\|_2$ denotes the spectral norm (largest singular value). 
+
+Let $\delta > 0$ be the \textbf{spectral gap}: the minimum distance between distinct eigenvalues of $\mathcal{L}_0$. Assume:
+\begin{enumerate}
+    \item $\sigma < \delta/4$ (noise is small compared to spectral gap)
+    \item $\epsilon = \delta/2$ (threshold is half the spectral gap)
+\end{enumerate}
+
+Then the error in the spectral approximation of $h^1$ is bounded by:
+\begin{equation}
+|h^1_{\epsilon}(\mathcal{L}) - h^1_{\text{true}}(\mathcal{L}_0)| \leq \left\lceil \frac{2\sigma}{\delta} \right\rceil
+\end{equation}
+where $h^1_{\epsilon}(\mathcal{L}) = \#\{i : \lambda_i(\mathcal{L}) < \epsilon\} - 1$ is the spectral approximation.
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+By Weyl's inequality, each eigenvalue of $\mathcal{L}$ is within $\sigma$ of the corresponding eigenvalue of $\mathcal{L}_0$. The ideal zero block (from $H^0 \oplus H^1$) has $1 + h^1_{\text{true}}$ eigenvalues, all exactly zero. Under perturbation, these shift to $[-\sigma, \sigma]$. The positive block starts at $\delta$ and shifts to $[\delta - \sigma, \infty)$. With $\epsilon = \delta/2$ and $\sigma < \delta/4$, the threshold cleanly separates the two blocks, with at most $\lceil 2\sigma/\delta \rceil$ eigenvalues potentially crossing the threshold. See the main manuscript (Appendix~A) for the detailed proof with all steps. \qed
+\end{proof}
+
+\begin{theorem}[Computational Complexity]
+\label{thm:complexity}
+Consider a graph $G = (V, E)$ with $N = |V|$ vertices, $M = |E|$ edges, and $M = O(N)$ (sparse graph). Let $d$ be the stalk dimension, assumed to be a small constant (e.g., $d \in \{2, 4, 8\}$). 
+
+The STPGC algorithm (Algorithm~1 in the main manuscript) computes the Phronesis Index $\Phi$ in:
+\begin{equation}
+O(Nd \log(Nd)) \text{ time}
+\end{equation}
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+The algorithm has three steps: (1) Construct $\mathcal{L}$: $O(Nd^2)$ time (iterating over edges and filling sparse matrix). (2) Compute $k = 20$ smallest eigenvalues via Lanczos: $O(Nd \cdot k)$ per iteration, $O(\log(Nd))$ iterations to converge, total $O(Nd \log(Nd))$. (3) Compute $\Phi$: $O(k) = O(1)$. Since $d$ is constant and $M = O(N)$, the dominant term is $O(Nd \log(Nd))$. See the main manuscript (Appendix~A) for the full complexity analysis. \qed
+\end{proof}
+
+\begin{remark}[Conditions for Theorem~\ref{thm:error_bound}]
+The condition $\sigma < \delta/4$ is \textit{necessary} for the error bound to hold. If noise exceeds this level, eigenvalues from the positive block can be pushed below $\epsilon$, causing $h^1_{\epsilon}$ to overestimate $h^1_{\text{true}}$ arbitrarily. In practice, this means:
+\begin{itemize}
+    \item For systems with small spectral gap ($\delta < 0.01$), the method is sensitive to noise.
+    \item For systems with large spectral gap ($\delta > 0.1$), the method is robust to moderate noise ($\sigma \approx 0.02$).
+    \item If $\sigma \geq \delta/4$, use noise filtering (Section~\ref{sec:robustness}) or increase $\epsilon$ adaptively.
+\end{itemize}
+\end{remark}
+
+\begin{remark}[Conditions for Theorem~\ref{thm:complexity}]
+The $O(Nd \log(Nd))$ complexity assumes:
+\begin{enumerate}
+    \item \textbf{Sparse graph:} $M = O(N)$. For dense graphs ($M = O(N^2)$), Laplacian construction becomes $O(N^2 d^2)$, dominating the eigenvalue computation.
+    \item \textbf{Small stalk dimension:} $d = O(1)$. For large $d$ (e.g., $d = 100$), the $d^2$ factor in Laplacian construction may dominate.
+    \item \textbf{Well-conditioned Laplacian:} Lanczos converges in $O(\log(Nd))$ iterations. For ill-conditioned matrices (e.g., very small spectral gap), convergence may be slower.
+\end{enumerate}
+In our experiments, these conditions hold: graphs have $M \approx 4N$ (grid-like), stalks have $d \in \{2, 4\}$, and spectral gaps are $\delta > 0.01$.
+\end{remark}
