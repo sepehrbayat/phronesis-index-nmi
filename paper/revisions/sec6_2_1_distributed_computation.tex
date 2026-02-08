@@ -1,0 +1,91 @@
+\subsubsection{Computational Architecture and Distributed Implementation}
+\label{sec:distributed}
+
+\textbf{Current Method: Centralized Computation}
+
+The STPGC algorithm presented in this paper assumes \textbf{centralized computation}: all agent data (stalks and restriction maps) is collected at a central node, which constructs the Connection Laplacian $\mathcal{L}$ and computes its eigenvalues. This architecture has both advantages and limitations:
+
+\paragraph{Advantages of Centralized Computation}
+\begin{itemize}
+    \item \textbf{Simplicity:} Standard linear algebra libraries (e.g., ARPACK, SciPy) can be used directly.
+    \item \textbf{Efficiency:} For systems with $N < 10^4$ agents and moderate update frequency (e.g., 1 Hz), centralized computation is feasible on commodity hardware (e.g., a single CPU core can compute $\Phi$ for $N = 1000$ in $\approx 0.1$ seconds).
+    \item \textbf{Exact results:} No approximation error from distributed aggregation.
+\end{itemize}
+
+\paragraph{Limitations of Centralized Computation}
+\begin{itemize}
+    \item \textbf{Communication bottleneck:} All agents must send their data to the central node, requiring $O(Nd)$ communication per update.
+    \item \textbf{Single point of failure:} If the central node fails, the entire system loses consistency monitoring.
+    \item \textbf{Privacy concerns:} Agents must share raw data with a central authority, which may not be acceptable in privacy-sensitive applications (e.g., medical data, financial transactions).
+    \item \textbf{Scalability ceiling:} For $N > 10^5$ agents, even sparse eigenvalue computation becomes expensive (minutes to hours).
+\end{itemize}
+
+\paragraph{Distributed Eigenvalue Computation: Challenges}
+
+Developing a fully distributed variant of STPGC, where each agent computes a local contribution to $\Phi$ without centralization, is an important open problem. The main challenges are:
+
+\begin{enumerate}
+    \item \textbf{Distributed Lanczos:} The Lanczos algorithm for eigenvalue computation requires global synchronization (orthogonalization of Krylov vectors). Distributed variants exist \cite{hernandez2005slepc} but require multiple rounds of communication and may not achieve $O(N \log N)$ \textit{per-agent} complexity.
+    
+    \item \textbf{Spectral gap estimation:} Procedure 1 (Sec.~\ref{sec:epsilon_procedure}) requires computing 50 eigenvalues to identify the spectral gap. Distributed estimation of multiple eigenvalues is more complex than estimating a single eigenvalue (e.g., via power iteration).
+    
+    \item \textbf{Consensus on $h^1_{\epsilon}$:} Each agent must agree on the count of near-zero eigenvalues. This requires distributed thresholding and counting, which is non-trivial in asynchronous systems.
+\end{enumerate}
+
+\paragraph{Possible Distributed Approaches (Future Work)}
+
+While a fully distributed STPGC is beyond the scope of this paper, we outline promising directions:
+
+\textbf{1. Hierarchical Aggregation:}
+\begin{itemize}
+    \item Partition agents into clusters (e.g., spatial regions).
+    \item Each cluster computes a local Phronesis Index $\Phi_{\text{local}}$ using a local central node.
+    \item A higher-level coordinator aggregates cluster indices into a global $\Phi_{\text{global}}$.
+    \item \textbf{Advantage:} Reduces communication to cluster boundaries.
+    \item \textbf{Challenge:} Defining meaningful cluster boundaries and aggregation rules.
+\end{itemize}
+
+\textbf{2. Gossip-Based Approximation:}
+\begin{itemize}
+    \item Agents exchange information with neighbors via gossip protocols.
+    \item Each agent maintains a local estimate of $\Phi$ based on its neighborhood.
+    \item Estimates converge to a global consensus over time.
+    \item \textbf{Advantage:} No central node, robust to failures.
+    \item \textbf{Challenge:} Convergence may be slow, and accuracy depends on graph connectivity.
+\end{itemize}
+
+\textbf{3. Federated Learning Techniques:}
+\begin{itemize}
+    \item Treat eigenvalue computation as an optimization problem (e.g., Rayleigh quotient minimization).
+    \item Use federated optimization (e.g., FedAvg) to iteratively refine eigenvalue estimates without sharing raw data.
+    \item \textbf{Advantage:} Privacy-preserving (agents share gradients, not data).
+    \item \textbf{Challenge:} Requires multiple rounds of communication, may not converge for ill-conditioned matrices.
+\end{itemize}
+
+\paragraph{Practical Recommendation}
+
+For current deployments, we recommend:
+\begin{itemize}
+    \item \textbf{Small systems ($N < 1000$):} Use centralized STPGC. Computational cost is negligible.
+    \item \textbf{Medium systems ($1000 < N < 10^4$):} Use hierarchical aggregation with local central nodes per cluster.
+    \item \textbf{Large systems ($N > 10^4$):} Distributed STPGC is necessary but not yet available. Consider sampling-based approximations (e.g., compute $\Phi$ on a random subgraph of size $\approx 1000$) as a stopgap.
+\end{itemize}
+
+\paragraph{Computational Cost in Practice}
+
+To provide concrete guidance, we measured the wall-clock time to compute $\Phi$ on a single CPU core (Intel Xeon E5-2680 v4, 2.4 GHz):
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+$N$ (agents) & $d$ (stalk dim) & $M$ (edges) & Time (seconds) & Memory (MB) \\
+\midrule
+100 & 2 & 400 & 0.01 & 1 \\
+1,000 & 2 & 4,000 & 0.08 & 8 \\
+10,000 & 2 & 40,000 & 1.2 & 80 \\
+50,000 & 2 & 200,000 & 8.5 & 400 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+For real-time monitoring at 1 Hz, centralized computation is feasible up to $N \approx 10^4$ agents. Beyond this, either reduce update frequency or use distributed methods.

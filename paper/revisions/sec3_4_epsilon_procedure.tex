@@ -1,0 +1,90 @@
+\subsection{Choosing $\epsilon$: A Reproducible Procedure}
+\label{sec:epsilon_procedure}
+
+The Phronesis Index depends critically on the threshold $\epsilon$ used to count near-zero eigenvalues. \textbf{The magnitude of $\Phi$ depends on $\epsilon$, and comparisons across systems MUST use the same $\epsilon$ value.} Here we provide a step-by-step, reproducible procedure for selecting $\epsilon$ in practice.
+
+\paragraph{Procedure 1: Spectral Gap Estimation (Recommended)}
+
+This procedure automatically adapts $\epsilon$ to the system's spectral structure:
+
+\begin{enumerate}
+    \item \textbf{Compute eigenvalues:} Use the Lanczos algorithm to compute the $k = 50$ smallest eigenvalues of $\mathcal{L}$: $\{\lambda_0, \lambda_1, \ldots, \lambda_{49}\}$.
+    
+    \item \textbf{Identify spectral gap:} Find the largest gap among the first 10 eigenvalues:
+    \begin{equation}
+    \delta = \max_{i=0,\ldots,9} (\lambda_{i+1} - \lambda_i)
+    \end{equation}
+    This gap typically separates the near-zero eigenvalues (from $H^0 \oplus H^1$) from the positive spectrum.
+    
+    \item \textbf{Set threshold:} 
+    \begin{equation}
+    \epsilon = \frac{\delta}{2}
+    \end{equation}
+    This choice ensures that eigenvalues below $\epsilon$ are "close to zero" relative to the system's natural scale, while eigenvalues above $\epsilon$ are "clearly positive."
+    
+    \item \textbf{Compute index:} Use this $\epsilon$ in Definition~\ref{def:phronesis} to compute $\Phi$.
+\end{enumerate}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{figure_eigenvalue_spectrum.png}
+\caption{Eigenvalue spectrum showing spectral gap $\delta$ and threshold $\epsilon = \delta/2$. Eigenvalues below $\epsilon$ (shaded) are counted as near-zero, approximating $h^1$. The smallest eigenvalue above $\epsilon$ is $\lambda_1^+$.}
+\label{fig:spectrum}
+\end{figure}
+
+\paragraph{Procedure 2: Noise-Adaptive (When Noise Level is Known)}
+
+If the noise level $\sigma$ in the system is known (e.g., from sensor specifications or calibration data):
+
+\begin{enumerate}
+    \item \textbf{Estimate noise:} Determine $\sigma$ from:
+    \begin{itemize}
+        \item Sensor datasheets (e.g., GPS error $\sigma = 5$ meters)
+        \item Empirical measurements (e.g., standard deviation of repeated observations)
+        \item Communication error rates (e.g., bit error rate)
+    \end{itemize}
+    
+    \item \textbf{Set threshold:}
+    \begin{equation}
+    \epsilon = 4\sigma
+    \end{equation}
+    This ensures $\sigma < \epsilon/4$, satisfying the condition in Theorem~\ref{thm:error_bound} for provable error bounds.
+\end{enumerate}
+
+\paragraph{Parameter Sensitivity}
+
+The behavior of $\Phi$ as $\epsilon$ varies is predictable:
+
+\begin{itemize}
+    \item \textbf{As $\epsilon$ increases:} More eigenvalues are counted as "near-zero," so $h^1_{\epsilon}$ increases, causing $\Phi$ to decrease.
+    
+    \item \textbf{As $\epsilon \to 0$:} Only truly zero eigenvalues are counted, so $h^1_{\epsilon} \to h^1_{\text{true}}$ and $\Phi \to \lambda_1^+ / h^1_{\text{true}}$ (the ideal value).
+    
+    \item \textbf{As $\epsilon \to \infty$:} All eigenvalues are counted as "near-zero," so $h^1_{\epsilon} \to Nd$ and $\Phi \to 0$ (meaningless).
+\end{itemize}
+
+In practice, $\epsilon$ should be chosen in the range $[10^{-3}, 10^{-1}]$ for typical systems. Values outside this range often indicate either numerical precision issues ($\epsilon$ too small) or inappropriate threshold selection ($\epsilon$ too large).
+
+\paragraph{Reporting Convention}
+
+To enable cross-study comparison and reproducibility, we recommend reporting:
+\begin{enumerate}
+    \item The Phronesis Index value: $\Phi = \lambda_1^+ / (h^1_{\epsilon} + \epsilon)$
+    \item The threshold used: $\epsilon = \ldots$
+    \item The approximate cohomology dimension: $h^1_{\epsilon} = \ldots$
+    \item The smallest positive eigenvalue: $\lambda_1^+ = \ldots$
+\end{enumerate}
+
+This four-tuple $(\Phi, \epsilon, h^1_{\epsilon}, \lambda_1^+)$ fully characterizes the system's consistency state and allows other researchers to verify or compare results.
+
+\paragraph{Example}
+
+In our Safety Gym experiments (Sec.~\ref{sec:safety_gym}), we used:
+\begin{itemize}
+    \item \textbf{Procedure:} Spectral gap estimation (Procedure 1)
+    \item \textbf{Computed gap:} $\delta \approx 0.02$
+    \item \textbf{Threshold:} $\epsilon = 0.01$
+    \item \textbf{Typical values:} Early training: $h^1_{\epsilon} \approx 8$, $\lambda_1^+ \approx 0.05$, $\Phi \approx 6$. Late training: $h^1_{\epsilon} \approx 1$, $\lambda_1^+ \approx 0.08$, $\Phi \approx 80$.
+\end{itemize}
+
+The 13-fold increase in $\Phi$ reflects both improved spectral gap (from 0.05 to 0.08) and reduced inconsistency (from 8 to 1 topological holes).

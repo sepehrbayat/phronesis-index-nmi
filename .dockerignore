@@ -1,0 +1,11 @@
+__pycache__
+*.pyc
+.git
+.venv
+env/
+*.pdf
+code/results
+code/logic_maze/results
+code/safety_gym/results
+code/multi_robot/results
+code/scalability/results

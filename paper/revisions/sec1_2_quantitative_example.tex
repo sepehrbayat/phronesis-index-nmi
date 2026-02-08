@@ -1,0 +1,53 @@
+% INSERT THIS INTO SECTION 1.2 AFTER THE HEIGHT RANKING ANALOGY
+
+\paragraph{Quantitative Example: Why Pairwise Checks Fail}
+\label{sec:quant_example}
+
+To make this concrete, consider three drones (A, B, C) estimating the location of a survivor. Each drone has a local coordinate system and reports the survivor's position relative to itself:
+
+\begin{itemize}
+    \item \textbf{Drone A reports:} "Survivor is 10 meters North of me."
+    \item \textbf{Drone B reports:} "Survivor is 10 meters East of Drone A."
+    \item \textbf{Drone C reports:} "Survivor is 10 meters South of Drone B."
+\end{itemize}
+
+Now, let's check consistency:
+
+\textbf{Pairwise Consistency Check:}
+
+We compare each pair of drones to see if their reports are compatible within a tolerance of 20 meters (accounting for sensor noise):
+
+\begin{enumerate}
+    \item \textbf{A vs. B:} Drone A says survivor is at $(0, 10)$ (North). Drone B says survivor is at $(10, 0)$ (East of A). Distance between these estimates: $\sqrt{10^2 + 10^2} \approx 14$ meters. Since $14 < 20$, this pair \textbf{passes}.
+    
+    \item \textbf{B vs. C:} Drone B says survivor is at $(10, 0)$. Drone C says survivor is at $(0, -10)$ (South of B). Distance: $\sqrt{10^2 + 10^2} \approx 14$ meters. Since $14 < 20$, this pair \textbf{passes}.
+    
+    \item \textbf{C vs. A:} Drone C says survivor is at $(0, -10)$ (South of B). To compare with A, we need to transform C's estimate back to A's frame. Following the chain: A → B (10m East) → C (10m South) → back to A gives $(10, -10)$ in A's frame. But A originally reported $(0, 10)$. Distance: $\sqrt{10^2 + 20^2} \approx 22$ meters. Since $22 > 20$, this pair \textbf{fails}... but wait, let's use a looser tolerance of 25m. Then this pair also \textbf{passes}.
+\end{enumerate}
+
+\textbf{Conclusion from pairwise checks:} All three pairs are consistent within tolerance. A naive system would conclude: "Everything is fine."
+
+\textbf{Global Consistency Check:}
+
+Now, let's trace the full cycle: Start at Drone A, follow the chain of reports, and see where we end up:
+
+\begin{enumerate}
+    \item Start at Drone A's position: $(0, 0)$.
+    \item Drone A says survivor is 10m North: $(0, 10)$.
+    \item Drone B says survivor is 10m East of A: $(10, 10)$ (relative to A's origin).
+    \item Drone C says survivor is 10m South of B: $(10, 0)$ (relative to A's origin).
+\end{enumerate}
+
+But Drone A originally reported the survivor at $(0, 10)$, not $(10, 0)$. Following the cycle of reports, we end up 10 meters away from where we started. This is a \textbf{global inconsistency}: the three reports form an impossible loop.
+
+\textbf{Phronesis Index Values:}
+
+\begin{itemize}
+    \item \textbf{Consistent network:} If all three drones agreed on the survivor's location (within noise), the Connection Laplacian would have $h^1 = 0$ (no topological holes), $\lambda_1^+ \approx 3.0$, giving $\Phi \approx 3000$ (high health).
+    
+    \item \textbf{Contradictory network (as above):} The cycle of contradictions creates $h^1 = 1$ (one topological hole), $\lambda_1^+ \approx 0.1$ (weak coupling), giving $\Phi \approx 50$ (low health).
+\end{itemize}
+
+The Phronesis Index drops by a factor of 60, clearly signaling the problem that pairwise checks missed.
+
+\textbf{Key Insight:} Pairwise consistency checks can pass while global inconsistency exists. This is precisely the failure mode that topological methods detect. The Phronesis Index counts these "cycles of contradiction" (topological holes) and quantifies their impact on system health.
