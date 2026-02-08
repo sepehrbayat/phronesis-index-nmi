@@ -1,0 +1,171 @@
+% Deployment Considerations for V13
+% Practical guidance for real-world implementation
+
+\section{Deployment Considerations}
+\label{sec:deployment}
+
+This section provides practical guidance for deploying the Phronesis Index in real-world multi-agent systems, addressing operational concerns that arise beyond controlled experimental settings.
+
+\subsection{System Integration}
+
+\subsubsection{Architecture Patterns}
+
+\paragraph{Centralized Monitoring}
+\begin{itemize}
+    \item All agents report beliefs to a central server
+    \item Server constructs sheaf and computes $\Phi$
+    \item \textbf{Pros:} Simple to implement, full visibility
+    \item \textbf{Cons:} Single point of failure, communication overhead
+    \item \textbf{Use case:} Small-to-medium systems with reliable networking
+\end{itemize}
+
+\paragraph{Distributed Monitoring}
+\begin{itemize}
+    \item Each agent computes local contribution to $\mathcal{L}$
+    \item Contributions aggregated via gossip protocol
+    \item \textbf{Pros:} Scalable, fault-tolerant
+    \item \textbf{Cons:} More complex, approximate $\Phi$
+    \item \textbf{Use case:} Large-scale IoT, swarm robotics
+\end{itemize}
+
+\paragraph{Hierarchical Monitoring}
+\begin{itemize}
+    \item System divided into clusters
+    \item Local $\Phi$ computed per cluster
+    \item Global $\Phi$ aggregated from local values
+    \item \textbf{Pros:} Balances scalability and accuracy
+    \item \textbf{Cons:} Requires cluster design
+    \item \textbf{Use case:} Multi-tier systems (e.g., factory floors)
+\end{itemize}
+
+\subsubsection{Computational Resources}
+
+\textbf{Memory Requirements:}
+\begin{itemize}
+    \item Sparse Laplacian: $O(Md)$ where $M = |E|$, $d$ = stalk dimension
+    \item Lanczos workspace: $O(Ndk)$ where $k \approx 20$
+    \item Total: typically $< 1$ GB for $N = 10^4$, $d = 4$
+\end{itemize}
+
+\textbf{Computation Time:}
+\begin{itemize}
+    \item Per-iteration: $O(N \log N)$ for sparse graphs
+    \item Typical: 0.1–1 second for $N = 10^3$
+    \item Scalable to $N = 10^5$ with GPU acceleration
+\end{itemize}
+
+\subsection{Operational Parameters}
+
+\subsubsection{Threshold Selection}
+
+\textbf{Critical Threshold $\Phi_{\text{crit}}$:}
+
+Set based on empirical calibration:
+\begin{enumerate}
+    \item Collect data from system in known "healthy" and "unhealthy" states
+    \item Compute $\Phi$ distribution for each state
+    \item Set $\Phi_{\text{crit}}$ at the 5th percentile of healthy distribution
+\end{enumerate}
+
+\textbf{Example values from our experiments:}
+\begin{itemize}
+    \item Logic Maze: $\Phi_{\text{crit}} = 10$
+    \item Safety Gym: $\Phi_{\text{crit}} = 0.5$
+    \item Multi-Robot: $\Phi_{\text{crit}} = 2.0$
+\end{itemize}
+
+\subsubsection{Update Frequency}
+
+\textbf{Trade-off:} More frequent updates → faster detection, but higher overhead
+
+\textbf{Recommendations:}
+\begin{itemize}
+    \item \textbf{Critical systems:} Every 0.1–1 second
+    \item \textbf{Standard systems:} Every 1–10 seconds
+    \item \textbf{Low-priority monitoring:} Every 1–5 minutes
+\end{itemize}
+
+\textbf{Adaptive scheduling:} Increase frequency when $\Phi$ approaches $\Phi_{\text{crit}}$
+
+\subsection{Failure Handling}
+
+\subsubsection{Response Protocols}
+
+When $\Phi < \Phi_{\text{crit}}$:
+
+\paragraph{Level 1: Warning}
+\begin{itemize}
+    \item Log event
+    \item Notify operators
+    \item Continue operation with caution
+\end{itemize}
+
+\paragraph{Level 2: Intervention}
+\begin{itemize}
+    \item Trigger re-calibration protocol
+    \item Request additional observations
+    \item Slow down or pause risky actions
+\end{itemize}
+
+\paragraph{Level 3: Shutdown}
+\begin{itemize}
+    \item If $\Phi$ remains low after intervention
+    \item Gracefully halt system
+    \item Require manual inspection before restart
+\end{itemize}
+
+\subsubsection{False Positives/Negatives}
+
+\textbf{Reducing false positives:}
+\begin{itemize}
+    \item Use temporal filtering (Kalman smoothing)
+    \item Require $\Phi < \Phi_{\text{crit}}$ for $T$ consecutive timesteps
+    \item Cross-validate with domain-specific checks
+\end{itemize}
+
+\textbf{Reducing false negatives:}
+\begin{itemize}
+    \item Set conservative $\Phi_{\text{crit}}$ (higher threshold)
+    \item Monitor rate of change: $d\Phi/dt < 0$ sustained
+    \item Combine with other safety signals
+\end{itemize}
+
+\subsection{Maintenance and Monitoring}
+
+\subsubsection{System Health Metrics}
+
+Track over time:
+\begin{itemize}
+    \item $\Phi$ mean and variance
+    \item $h^1$ distribution
+    \item $\lambda_1$ trends
+    \item Alert frequency
+    \item Response latency
+\end{itemize}
+
+\subsubsection{Periodic Recalibration}
+
+\textbf{Recommended schedule:}
+\begin{itemize}
+    \item Weekly: Review $\Phi$ logs, adjust $\Phi_{\text{crit}}$ if needed
+    \item Monthly: Validate sheaf structure against ground truth
+    \item Quarterly: Full system audit and parameter tuning
+\end{itemize}
+
+\subsection{Code Availability}
+
+All code and data are publicly available at:
+\begin{center}
+\texttt{https://github.com/[username]/phronesis-index}
+\end{center}
+
+Includes:
+\begin{itemize}
+    \item Python implementation of STPGC algorithm
+    \item Sheaf construction utilities
+    \item Example scenarios (Logic Maze, Safety Gym, Multi-Robot)
+    \item Jupyter notebooks with tutorials
+    \item Docker container for reproducibility
+\end{itemize}
+
+\end{document}

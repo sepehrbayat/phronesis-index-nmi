@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[experiments,dev]"
+
+      - name: Run unit tests
+        run: pytest -v --tb=short
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[experiments,dev]"
+
+      - name: Smoke test — Logic Maze
+        run: python -m code.logic_maze.run --grid_size 3 --num_runs 2 --num_timesteps 30
+
+      - name: Smoke test — Safety Gym
+        run: python -m code.safety_gym.run --num_seeds 3
+
+      - name: Smoke test — Multi-Robot
+        run: python -m code.multi_robot.run --num_robots 5 --num_runs 2 --num_timesteps 20
+
+      - name: Smoke test — Scalability
+        run: python -m code.scalability.run --max_agents 500 --num_trials 2
+
+      - name: Verify outputs exist
+        run: |
+          test -f results/logic_maze/phi_timeseries.csv
+          test -f results/safety_gym/training_curves.csv
+          test -f results/multi_robot/consistency_metrics.csv
+          test -f results/scalability/scalability_data.csv
+          echo "All smoke test outputs verified."
+
+  build-paper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install TeX Live
+        uses: xu-cheng/latex-action@v3
+        with:
+          working_directory: paper
+          root_file: main_manuscript.tex
+          latexmk_use_xelatex: false
+
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: manuscript-pdf
+          path: paper/main_manuscript.pdf

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# LaTeX build artifacts
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.synctex.gz
+paper/supplementary/*.aux
+paper/supplementary/*.log
+paper/supplementary/*.out
+paper/supplementary/*.toc
+
+# Generated results (reproduce locally)
+results/
+
+# Compiled PDFs (reproduce via make)
+paper/main_manuscript.pdf
+paper/supplementary/supplementary_information.pdf

@@ -1,0 +1,82 @@
+\subsection{Limitations}
+\label{sec:limitations}
+
+While our experiments demonstrate the effectiveness of the Phronesis Index across multiple scenarios, several important limitations must be acknowledged:
+
+\paragraph{1. Real-World Factors Not Tested}
+
+The following real-world factors were \textbf{not} tested in our experiments and represent important gaps in our validation:
+
+\begin{enumerate}
+    \item \textbf{Asynchronous updates:} Our experiments assume agents update their beliefs synchronously (all at the same time). In real distributed systems, agents may update at different rates, leading to temporal inconsistencies. The effect of asynchrony on $\Phi$ is unknown.
+    
+    \item \textbf{Communication delays:} We assume instantaneous communication between agents. In practice, message passing has non-negligible latency (milliseconds to seconds), which can cause agents to operate on stale information. Whether $\Phi$ remains a reliable indicator under delays requires further study.
+    
+    \item \textbf{Packet loss:} Our experiments assume reliable communication. In wireless networks, packet loss rates can reach 10-30\%, causing agents to miss updates from neighbors. The robustness of $\Phi$ to missing data is untested.
+    
+    \item \textbf{Heavy noise:} Our robustness experiments (Appendix~\ref{app:robustness}) tested noise levels up to $\sigma = 0.2$. Real-world sensors may experience heavier noise ($\sigma > 0.5$), especially in harsh environments (e.g., underwater, space). The error bound in Theorem~\ref{thm:error_bound} assumes $\sigma < \delta/4$, which may not hold under heavy noise.
+    
+    \item \textbf{Adversarial attacks:} We did not test against malicious agents injecting false data. Adversarial robustness is critical for security-sensitive applications (e.g., autonomous vehicles, financial systems). Whether $\Phi$ can detect Byzantine failures or data poisoning is an open question.
+    
+    \item \textbf{Dynamic topology:} Our experiments use fixed communication graphs. In mobile multi-agent systems (e.g., drone swarms), the graph topology changes over time as agents move. Computing $\Phi$ on a time-varying graph requires extensions to our method (e.g., temporal smoothing, sliding windows).
+    
+    \item \textbf{Non-Euclidean stalks:} We tested only Euclidean stalks ($\mathbb{R}^d$). Some applications require non-Euclidean spaces (e.g., SO(3) for 3D rotations, probability simplexes for belief distributions). The Connection Laplacian generalizes to Riemannian manifolds, but we did not implement or test this.
+\end{enumerate}
+
+Each of these factors could degrade the effectiveness of $\Phi$ and requires dedicated future work.
+
+\paragraph{2. Sheaf Design Requires Expertise}
+
+As discussed in Sec.~\ref{sec:checklist}, defining stalks and restriction maps requires deep domain knowledge. This is a significant barrier to adoption:
+\begin{itemize}
+    \item \textbf{Non-expert users} may struggle to translate their system into a sheaf, limiting the method's accessibility.
+    \item \textbf{Incorrect sheaf design} (e.g., choosing inappropriate restriction maps) can lead to misleading $\Phi$ values. We provide guidelines (Sec.~\ref{sec:checklist}, Appendix~\ref{app:sheaf_guide}), but no formal verification exists to check if a sheaf correctly captures the intended consistency semantics.
+\end{itemize}
+
+Automated sheaf learning from data (Sec.~\ref{sec:future}) could address this, but remains an open problem.
+
+\paragraph{3. Centralized Computation Assumption}
+
+As detailed in Sec.~\ref{sec:distributed}, our method assumes centralized computation. This limits scalability and introduces a single point of failure. For systems with $N > 10^4$ agents or strict privacy requirements, distributed variants are needed but not yet available.
+
+\paragraph{4. Threshold Selection Sensitivity}
+
+While we provide reproducible procedures for choosing $\epsilon$ (Sec.~\ref{sec:epsilon_procedure}), the choice remains somewhat arbitrary:
+\begin{itemize}
+    \item \textbf{Procedure 1 (spectral gap):} Assumes a clear gap exists. For systems with a dense spectrum (many eigenvalues close together), the gap may be ambiguous.
+    \item \textbf{Procedure 2 (noise-adaptive):} Requires accurate noise estimation. If $\sigma$ is underestimated, $\epsilon$ may be too small, causing false positives (detecting inconsistencies that are actually noise).
+\end{itemize}
+
+Reporting the full tuple $(\Phi, \epsilon, h^1_{\epsilon}, \lambda_1^+)$ mitigates this by allowing readers to assess sensitivity, but does not eliminate the issue.
+
+\paragraph{5. Limited Experimental Diversity}
+
+Our experiments cover four scenarios, but many application domains remain untested:
+\begin{itemize}
+    \item \textbf{Continuous control:} We tested only discrete actions (Logic Maze, Safety Gym with discretized actions). Continuous action spaces (e.g., robotic manipulation) may require different sheaf constructions.
+    \item \textbf{Large-scale systems:} Our largest experiment had $N = 50{,}000$ agents (scalability test), but this was a synthetic scenario. Real-world systems with $N > 10^5$ (e.g., IoT networks, cloud services) remain untested.
+    \item \textbf{Non-robotic domains:} We focused on robotics and RL. Other domains (e.g., distributed databases, blockchain consensus, sensor fusion) may benefit from $\Phi$ but require domain-specific sheaf designs.
+\end{itemize}
+
+\paragraph{6. Comparison to Simple Baselines}
+
+While we compared PPO+STPGC to CPO (a sophisticated safe RL method), we did not compare to simpler consistency checks:
+\begin{itemize}
+    \item \textbf{Pairwise Bellman error:} Count the fraction of edges where $|Q(s, a) - (r + \gamma \max_{a'} Q(s', a'))| > \tau$. This is a local check that does not detect global cycles of inconsistency.
+    \item \textbf{Variance-based heuristics:} Measure the variance of Q-values across states as a proxy for inconsistency.
+\end{itemize}
+
+Adding such baselines would strengthen the claim that topological detection provides value beyond simpler methods. This is important future work.
+
+\paragraph{7. Theoretical Gaps}
+
+Our theoretical guarantees (Theorems~\ref{thm:spectral_cohomology}--\ref{thm:complexity}) have limitations:
+\begin{itemize}
+    \item \textbf{Theorem~\ref{thm:error_bound}:} Assumes $\sigma < \delta/4$. For systems with small spectral gaps or heavy noise, this condition may not hold, and the error bound becomes vacuous.
+    \item \textbf{Theorem~\ref{thm:complexity}:} Assumes sparse graphs ($M = O(N)$) and small stalks ($d = O(1)$). For dense graphs or high-dimensional stalks, the complexity degrades.
+    \item \textbf{No convergence guarantees:} For the RL integration (Sec.~\ref{sec:safety_gym}), we do not provide theoretical guarantees that reward shaping with $\Phi$ improves safety. Our results are empirical.
+\end{itemize}
+
+\paragraph{Summary}
+
+These limitations do not invalidate our results, but they define the boundaries of what has been demonstrated. Future work should systematically address each limitation to establish the Phronesis Index as a robust, general-purpose consistency detection tool.

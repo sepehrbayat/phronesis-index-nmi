@@ -1,0 +1,111 @@
+EDITS TO REDUCE OVERCLAIMING
+=============================
+
+These are find-and-replace edits to make claims more cautious and bounded.
+
+---
+
+SECTION 1.4: WHY THIS MATTERS - BROAD IMPLICATIONS
+---------------------------------------------------
+
+ORIGINAL:
+"Our index provides an early-warning system for such failures."
+
+REVISED:
+"Our index could provide an early-warning system for such failures, pending validation in production autonomous systems."
+
+---
+
+ORIGINAL:
+"The Phronesis Index offers a principled, computationally efficient solution."
+
+REVISED:
+"The Phronesis Index offers a principled, computationally efficient approach that shows promise in initial experiments."
+
+---
+
+ORIGINAL:
+"This work enables safer, more reliable multi-agent systems across domains."
+
+REVISED:
+"This work may enable safer, more reliable multi-agent systems across domains, subject to further validation in real-world deployments."
+
+---
+
+SECTION 6.3: FUTURE DIRECTIONS
+-------------------------------
+
+ORIGINAL:
+"Develop methods to learn sheaf structure from data."
+
+REVISED:
+"Develop methods to learn sheaf structure from data. This may enable fully automated consistency detection without domain expertise, though significant theoretical and practical challenges remain."
+
+---
+
+ORIGINAL:
+"Extend to time-varying graphs and dynamic systems."
+
+REVISED:
+"Extend to time-varying graphs and dynamic systems. Preliminary approaches could use sliding windows or temporal smoothing, but convergence guarantees are unknown."
+
+---
+
+ORIGINAL:
+"Apply to other domains: distributed databases, blockchain, sensor fusion."
+
+REVISED:
+"Explore applications to other domains: distributed databases, blockchain, sensor fusion. Each domain will require domain-specific sheaf designs and validation."
+
+---
+
+SECTION 1.4: SPECIFIC APPLICATION CLAIMS
+-----------------------------------------
+
+ORIGINAL:
+"In autonomous vehicles, inconsistent beliefs about other vehicles' positions can cause collisions."
+
+REVISED:
+"In autonomous vehicles, inconsistent beliefs about other vehicles' positions could cause collisions."
+
+---
+
+ORIGINAL:
+"In medical diagnosis systems, contradictory sensor readings can lead to misdiagnosis."
+
+REVISED:
+"In medical diagnosis systems, contradictory sensor readings could lead to misdiagnosis."
+
+---
+
+ORIGINAL:
+"In financial trading, inconsistent market data can trigger erroneous transactions."
+
+REVISED:
+"In financial trading, inconsistent market data could trigger erroneous transactions."
+
+---
+
+SECTION 6.3: DISTRIBUTED IMPLEMENTATION CLAIM
+----------------------------------------------
+
+ORIGINAL:
+"Distributed STPGC will enable real-time monitoring of large-scale systems."
+
+REVISED:
+"Distributed STPGC, if successfully developed, could enable real-time monitoring of large-scale systems. However, as discussed in Sec. 6.2.1, significant algorithmic challenges remain."
+
+---
+
+GENERAL PRINCIPLE:
+------------------
+
+Replace definitive claims ("will", "provides", "enables") with conditional language ("could", "may", "shows promise") when:
+1. The claim is not directly demonstrated in experiments
+2. The claim is about future applications
+3. The claim is about systems not tested
+
+Keep definitive language only for:
+1. Results directly shown in experiments
+2. Mathematical theorems with proofs
+3. Algorithmic properties that are provable

@@ -1,0 +1,228 @@
+\subsection{Practitioner's Quick-Start Guide}
+\label{sec:quickstart}
+
+This section provides a step-by-step guide for practitioners who want to apply the Phronesis Index to their own multi-agent systems. We assume basic familiarity with graph theory and linear algebra.
+
+\subsubsection{Five-Step Workflow}
+
+\paragraph{Step 1: Define Your Problem}
+
+\textbf{Question:} What consistency property do you want to monitor?
+
+\textbf{Examples:}
+\begin{itemize}
+    \item \textit{Sensor network:} Are temperature readings from neighboring sensors consistent?
+    \item \textit{Distributed database:} Do replicas agree on the current state?
+    \item \textit{Multi-robot team:} Do robots have compatible maps of the environment?
+    \item \textit{Reinforcement learning:} Are Q-values consistent across state transitions?
+\end{itemize}
+
+\textbf{Output:} A clear statement of what "consistency" means in your domain.
+
+\paragraph{Step 2: Construct the Belief Graph}
+
+\textbf{Question:} How are your agents connected?
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item \textbf{Vertices:} Each agent (or state, or data point) becomes a vertex.
+    \item \textbf{Edges:} Connect two vertices if they share information or have a consistency constraint.
+    \item \textbf{Example (sensor network):} Connect sensors within communication range.
+    \item \textbf{Example (RL):} Connect states that are reachable in one step.
+\end{enumerate}
+
+\textbf{Output:} A graph $G = (V, E)$ with $N$ vertices and $M$ edges.
+
+\paragraph{Step 3: Define Stalks and Restriction Maps}
+
+\textbf{Question:} What information does each agent hold, and how should it relate to neighbors?
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item \textbf{Stalks:} Choose a vector space $\mathcal{F}(v) = \mathbb{R}^d$ for each vertex $v$.
+    \begin{itemize}
+        \item \textit{Sensor network:} $d=1$ (scalar temperature reading)
+        \item \textit{Multi-robot:} $d=2$ (2D position)
+        \item \textit{RL:} $d=|A|$ (Q-values for $|A|$ actions)
+    \end{itemize}
+    
+    \item \textbf{Restriction maps:} Define how information at vertex $v$ should relate to information at neighbor $u$.
+    \begin{itemize}
+        \item \textit{Identity:} $r_{e,v} = I_d$ (neighbors should agree exactly)
+        \item \textit{Coordinate transform:} $r_{e,v} = R_{\theta}$ (rotation matrix for different reference frames)
+        \item \textit{Bellman consistency:} $r_{e,v} = \gamma \cdot I_d$ (RL discount factor)
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Output:} A cellular sheaf $\mathcal{F}$ on $G$.
+
+\textbf{Decision Tree:}
+\begin{itemize}
+    \item \textbf{If agents should agree exactly:} Use identity restrictions ($r_{e,v} = I_d$).
+    \item \textbf{If agents use different coordinate frames:} Use transformation matrices (e.g., rotations, translations).
+    \item \textbf{If consistency involves temporal dynamics:} Use discount factors (e.g., $\gamma$ in RL).
+    \item \textbf{If unsure:} Start with identity restrictions and refine based on domain knowledge.
+\end{itemize}
+
+\paragraph{Step 4: Compute the Phronesis Index}
+
+\textbf{Question:} How do I calculate $\Phi$?
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item \textbf{Construct Connection Laplacian:} Use Algorithm~\ref{alg:laplacian_construction} (see Appendix~\ref{app:algorithms}).
+    \item \textbf{Compute eigenvalues:} Use Lanczos iteration to find the smallest $k=20$ eigenvalues.
+    \item \textbf{Choose threshold:} Set $\epsilon = 0.1 \times \lambda_1^+$ (see Section~\ref{sec:parameter_selection}).
+    \item \textbf{Count near-zero eigenvalues:} $h^1_{\epsilon} = \#\{i : \lambda_i < \epsilon\} - 1$.
+    \item \textbf{Compute index:} $\Phi = \lambda_1^+ / (h^1_{\epsilon} + \epsilon)$.
+\end{enumerate}
+
+\textbf{Code Example (Python):}
+\begin{verbatim}
+import numpy as np
+from scipy.sparse.linalg import eigsh
+from phronesis import build_laplacian
+
+# Step 1: Define graph and sheaf
+G = nx.grid_2d_graph(10, 10)  # 10x10 grid
+stalks = {v: np.eye(4) for v in G.nodes()}  # 4D stalks
+restrictions = {e: np.eye(4) for e in G.edges()}  # Identity restrictions
+
+# Step 2: Build Laplacian
+L = build_laplacian(G, stalks, restrictions)
+
+# Step 3: Compute eigenvalues
+eigenvalues, _ = eigsh(L, k=20, which='SM')
+
+# Step 4: Compute Phronesis Index
+lambda_1_plus = eigenvalues[eigenvalues > 1e-8][0]
+epsilon = 0.1 * lambda_1_plus
+h1_epsilon = np.sum(eigenvalues < epsilon) - 1
+Phi = lambda_1_plus / (h1_epsilon + epsilon)
+
+print(f"Phronesis Index: {Phi:.4f}")
+\end{verbatim}
+
+\textbf{Output:} A single number $\Phi \in [0, \infty)$.
+
+\paragraph{Step 5: Interpret and Act}
+
+\textbf{Question:} What does $\Phi$ tell me?
+
+\textbf{Interpretation:}
+\begin{itemize}
+    \item \textbf{High $\Phi$ ($> 1.0$):} System is healthy. Strong consensus dynamics, few contradictions.
+    \item \textbf{Medium $\Phi$ ($\in [0.1, 1.0]$):} System is stressed. Monitor closely.
+    \item \textbf{Low $\Phi$ ($< 0.1$):} System is at risk. Investigate inconsistencies immediately.
+\end{itemize}
+
+\textbf{Actions:}
+\begin{itemize}
+    \item \textbf{If $\Phi$ drops suddenly:} Check for sensor failures, communication errors, or adversarial attacks.
+    \item \textbf{If $\Phi$ is consistently low:} Redesign the system (e.g., add redundancy, improve calibration).
+    \item \textbf{If $\Phi$ is stable:} System is operating normally.
+\end{itemize}
+
+\textbf{Threshold Selection:}
+The threshold for "low" vs "high" $\Phi$ depends on your application. We recommend:
+\begin{itemize}
+    \item Run pilot experiments to establish a baseline $\Phi$ for your system under normal operation.
+    \item Set alarm threshold at $\Phi_{\text{alarm}} = 0.5 \times \Phi_{\text{baseline}}$.
+    \item Adjust based on false positive/negative rates.
+\end{itemize}
+
+\subsubsection{Common Pitfalls and Troubleshooting}
+
+\paragraph{Pitfall 1: Graph is disconnected}
+\textbf{Symptom:} $h^1_{\epsilon}$ is very large, $\Phi \approx 0$.
+
+\textbf{Cause:} The belief graph has multiple connected components, each with its own $h^0$ contribution.
+
+\textbf{Solution:} Ensure the graph is connected. If agents naturally form clusters, compute $\Phi$ separately for each cluster.
+
+\paragraph{Pitfall 2: Spectral gap is too small}
+\textbf{Symptom:} $\lambda_1^+ \approx \epsilon$, making $h^1_{\epsilon}$ unstable.
+
+\textbf{Cause:} The system has weak consensus dynamics (e.g., poor connectivity, weak coupling).
+
+\textbf{Solution:} Increase graph connectivity (add more edges) or strengthen restriction maps (e.g., increase coupling weights).
+
+\paragraph{Pitfall 3: Stalk dimension is too large}
+\textbf{Symptom:} Laplacian computation is slow ($> 1$ second per update).
+
+\textbf{Cause:} The Laplacian matrix is $Nd \times Nd$. If $d$ is large (e.g., $d=100$), computation becomes expensive.
+
+\textbf{Solution:} Use dimensionality reduction (e.g., PCA) to reduce stalk dimension to $d \leq 10$.
+
+\paragraph{Pitfall 4: Numerical instability}
+\textbf{Symptom:} Eigenvalues are negative or complex.
+
+\textbf{Cause:} The Laplacian is not symmetric positive semi-definite (SPSD). This can happen if restriction maps are not properly defined.
+
+\textbf{Solution:} Verify that $\mathcal{L} = \delta^T \delta$ where $\delta$ is the coboundary operator. Use \texttt{np.linalg.eigvalsh} (for symmetric matrices) instead of \texttt{np.linalg.eig}.
+
+\subsubsection{Domain-Specific Recipes}
+
+\paragraph{Recipe 1: Sensor Networks}
+\begin{itemize}
+    \item \textbf{Graph:} $k$-nearest neighbors based on physical distance
+    \item \textbf{Stalks:} $\mathbb{R}^1$ (scalar sensor reading)
+    \item \textbf{Restrictions:} Identity ($r_{e,v} = 1$)
+    \item \textbf{Threshold:} $\epsilon = 0.01 \times \lambda_1^+$
+    \item \textbf{Interpretation:} Low $\Phi$ indicates sensor drift or calibration errors
+\end{itemize}
+
+\paragraph{Recipe 2: Multi-Robot SLAM}
+\begin{itemize}
+    \item \textbf{Graph:} Communication graph (robots within radio range)
+    \item \textbf{Stalks:} $\mathbb{R}^2$ (2D position estimate)
+    \item \textbf{Restrictions:} Coordinate frame transformations ($r_{e,v} = R_{\theta_{uv}} + t_{uv}$)
+    \item \textbf{Threshold:} $\epsilon = 0.1 \times \lambda_1^+$
+    \item \textbf{Interpretation:} Low $\Phi$ indicates map inconsistencies or localization failures
+\end{itemize}
+
+\paragraph{Recipe 3: Reinforcement Learning}
+\begin{itemize}
+    \item \textbf{Graph:} State transition graph (edges = possible transitions)
+    \item \textbf{Stalks:} $\mathbb{R}^{|A|}$ (Q-values for $|A|$ actions)
+    \item \textbf{Restrictions:} Bellman consistency ($r_{e,v} = \gamma \cdot I_{|A|}$)
+    \item \textbf{Threshold:} $\epsilon = 0.002$ (empirically determined)
+    \item \textbf{Interpretation:} Low $\Phi$ indicates Q-value inconsistencies or policy instability
+\end{itemize}
+
+\paragraph{Recipe 4: Distributed Databases}
+\begin{itemize}
+    \item \textbf{Graph:} Replication topology (edges = replica synchronization)
+    \item \textbf{Stalks:} $\mathbb{R}^d$ (database state vector)
+    \item \textbf{Restrictions:} Identity ($r_{e,v} = I_d$)
+    \item \textbf{Threshold:} $\epsilon = 10^{-6}$ (strict consistency)
+    \item \textbf{Interpretation:} Low $\Phi$ indicates replication lag or conflicts
+\end{itemize}
+
+\subsubsection{Checklist for First-Time Users}
+
+Before deploying $\Phi$ in your system, verify:
+\begin{enumerate}
+    \item[$\square$] Graph $G$ is connected
+    \item[$\square$] Stalk dimension $d \leq 10$ (for efficiency)
+    \item[$\square$] Restriction maps are linear and well-defined
+    \item[$\square$] Laplacian matrix is symmetric positive semi-definite
+    \item[$\square$] Eigenvalue computation converges ($k=20$ is sufficient)
+    \item[$\square$] Threshold $\epsilon$ is chosen based on spectral gap
+    \item[$\square$] Baseline $\Phi$ is established under normal operation
+    \item[$\square$] Alarm threshold is set based on pilot experiments
+    \item[$\square$] Code is tested on small examples before scaling up
+    \item[$\square$] Computation time is acceptable for your real-time requirements
+\end{enumerate}
+
+\subsubsection{When NOT to Use the Phronesis Index}
+
+The Phronesis Index is not suitable for:
+\begin{itemize}
+    \item \textbf{Non-linear constraints:} If consistency constraints are highly non-linear, linearization may introduce errors.
+    \item \textbf{Extremely large systems ($N > 10^6$):} Eigenvalue computation becomes prohibitively expensive.
+    \item \textbf{Rapidly changing topologies:} If the graph structure changes faster than $\Phi$ can be computed, the index may lag behind reality.
+    \item \textbf{Systems without spatial/temporal structure:} If agents are completely independent (no edges), $\Phi$ is undefined.
+\end{itemize}
+
+In these cases, consider alternative methods (e.g., SAT solvers for non-linear constraints, sampling-based methods for large systems).

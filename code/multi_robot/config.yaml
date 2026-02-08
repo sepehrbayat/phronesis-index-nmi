@@ -1,0 +1,25 @@
+# Multi-Robot Coordination experiment configuration
+# See paper Section 5.3
+
+experiment:
+  name: multi_robot
+  description: "Spatial consistency monitoring for multi-robot coordination"
+
+robots:
+  num_robots: 10
+  connectivity: 0.3     # Erdős–Rényi edge probability
+  stalk_dim: 2          # 2D position per robot
+
+simulation:
+  num_timesteps: 100
+  num_runs: 10
+  seed_base: 42
+
+phronesis:
+  epsilon: 0.01
+  k: 20
+
+output:
+  dir: "results/multi_robot"
+  csv: "consistency_metrics.csv"
+  figure: "robot_trajectories.png"

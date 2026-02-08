@@ -1,0 +1,22 @@
+# Scalability test configuration
+# See paper Section 5.4
+
+experiment:
+  name: scalability
+  description: "Measure computation time vs number of agents"
+
+scalability:
+  sizes: [100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000]
+  avg_degree: 10         # target average degree (sparse graphs)
+  stalk_dim: 2
+  num_trials: 5          # repeats per size
+  seed_base: 42
+
+phronesis:
+  epsilon: 0.01
+  k: 20
+
+output:
+  dir: "results/scalability"
+  csv: "scalability_data.csv"
+  figure: "figure4_scalability.png"

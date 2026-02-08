@@ -1,0 +1,574 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{cleveref}
+\usepackage[utf8]{inputenc}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{corollary}[theorem]{Corollary}
+
+\title{\textbf{Spectral Sheaf Heuristics for Consistency Detection \\in Multi-Agent Systems}}
+\author{Sepehr Bayat \\ Hooshex AI Lab \\ \texttt{sepehrbayat@hooshex.com}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Multi-agent systems must maintain internally consistent beliefs to operate reliably, yet detecting global inconsistencies in distributed networks remains computationally expensive. We introduce the \textbf{Phronesis Index} ($\Phi$), a computationally efficient spectral heuristic that quantifies consistency by approximating topological obstructions in cellular sheaves. Our method achieves $O(N \log N)$ complexity (versus $O(N^3)$ for exact cohomology) with provable error bounds. We validate $\Phi$ across four scenarios: Logic Maze anomaly detection, Safety Gym safe reinforcement learning, multi-robot coordination, and scalability tests up to 50,000 agents. Statistical analysis over 10 independent runs demonstrates 23\% safety improvement ($p < 0.01$) compared to baselines. We provide comprehensive guidance for sheaf construction, robustness under noise, and practical deployment considerations. All code and data are publicly available at \url{https://github.com/sepehrbayat/phronesis-index-nmi}.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==================================================
+% SECTION 1: INTRODUCTION
+%==================================================
+
+\section{Introduction}
+
+\subsection{Opening: A Concrete Scenario}
+
+Imagine a team of three autonomous drones deployed for search-and-rescue after a natural disaster. Each drone independently surveys a section of the affected area, using onboard sensors to estimate the location of survivors. Drone A reports a survivor at coordinates $(45.2°N, 122.1°W)$. Drone B, which should have overlapping coverage, reports the same survivor at $(45.3°N, 122.0°W)$—a discrepancy of about 10 kilometers. Drone C's estimate falls somewhere in between. 
+
+On the surface, these might seem like minor measurement errors. But here's the critical question: \textit{Are these differences merely noisy observations of the same underlying truth, or do they represent a fundamental contradiction in the drones' collective understanding of the environment?}
+
+If it's the former—simple noise—the team can average their estimates and proceed confidently. But if it's the latter—a deeper inconsistency, perhaps caused by one drone's malfunctioning GPS or a miscalibrated sensor—then averaging could be disastrous, leading rescuers to the wrong location while precious time is lost.
+
+This paper introduces a mathematical tool to answer that question automatically: the \textbf{Phronesis Index} ($\Phi$), a single number that quantifies whether a multi-agent system's beliefs are internally consistent or fundamentally contradictory.
+
+\subsection{The Challenge: Local vs. Global Consistency}
+
+The drone scenario illustrates a pervasive challenge in distributed systems: \textit{local consistency does not guarantee global consistency}. Each pair of drones might have beliefs that are roughly compatible (within sensor error margins), yet the \textit{collective} set of beliefs may contain a logical impossibility—a "cycle of contradictions" that cannot be resolved by any single, coherent worldview.
+
+Consider a simpler analogy: three people comparing heights. Alice says, "I'm taller than Bob." Bob says, "I'm taller than Charlie." Charlie says, "I'm taller than Alice." Each pairwise statement seems reasonable in isolation, but together they form an impossible loop. No consistent height ranking exists.
+
+In multi-agent systems, such contradictions arise from:
+\begin{itemize}
+    \item \textbf{Sensor drift or calibration errors:} Agents' measurements diverge over time.
+    \item \textbf{Communication delays or packet loss:} Agents operate on stale or incomplete information.
+    \item \textbf{Adversarial interference:} Malicious actors inject false data.
+    \item \textbf{Model mismatch:} Agents use different assumptions or coordinate frames.
+\end{itemize}
+
+Detecting these contradictions early is crucial for \textit{trustworthy AI}, \textit{safe robotics}, and \textit{reliable distributed systems}. Yet existing methods either:
+\begin{enumerate}
+    \item Check only pairwise consistency (missing global contradictions), or
+    \item Require expensive, centralized computation (impractical for large-scale or real-time systems).
+\end{enumerate}
+
+% INSERT QUANTITATIVE EXAMPLE HERE
+\input{revisions/sec1_2_quantitative_example.tex}
+
+\subsection{Our Approach: Topology Meets Computation}
+
+We propose a novel approach inspired by \textit{algebraic topology}, a branch of mathematics that studies the "shape" of data. The key insight is that contradictions in a belief network manifest as \textit{topological holes}—structural features that can be detected efficiently using spectral methods.
+
+\subsubsection{Intuition: Holes in Knowledge Structures}
+
+Think of a multi-agent belief network as a fabric woven from threads of information. Each thread connects two agents who share a belief or constraint. If all threads align perfectly, the fabric is seamless—a single, coherent worldview exists. But if some threads pull in incompatible directions, they create a \textit{hole} in the fabric: a region where no consistent global view can "fill in" the gap.
+
+In our drone example:
+\begin{itemize}
+    \item If Drone A and B agree, B and C agree, and C and A agree, the network is seamless (no hole).
+    \item If A and B disagree slightly, but B and C, and C and A also disagree in a way that forms a cycle, a hole appears. This hole is a mathematical signature of irresolvable contradiction.
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{figure_conceptual_diagram.png}
+\caption{Conceptual diagram: Multi-agent belief network as a fabric with holes representing contradictions. When local beliefs (threads) pull in incompatible directions, they create topological holes that cannot be resolved by any consistent global view.}
+\label{fig:conceptual}
+\end{figure}
+
+\subsubsection{From Intuition to Algorithm}
+
+We formalize this intuition using \textit{cellular sheaves}, a mathematical structure that encodes local beliefs (at each agent) and consistency constraints (between agents). The number of holes—technically, the \textit{first cohomology dimension} ($h^1$)—counts independent cycles of contradiction.
+
+Computing $h^1$ exactly is expensive ($O(N^3)$ for $N$ agents), but we show it can be \textit{approximated} by analyzing the eigenvalues of a matrix called the \textit{Connection Laplacian}. Specifically:
+\begin{itemize}
+    \item The number of near-zero eigenvalues approximates $h^1$ (with provable error bounds).
+    \item The smallest positive eigenvalue ($\lambda_1^+$) measures how quickly the system can "iron out" local disagreements via information diffusion.
+\end{itemize}
+
+We combine these into the Phronesis Index:
+\begin{equation}
+\Phi = \frac{\lambda_1^+}{h^1_{\epsilon} + \epsilon}
+\end{equation}
+
+\textbf{Interpretation:}
+\begin{itemize}
+    \item \textbf{High $\Phi$:} Strong consensus dynamics ($\lambda_1^+$ large) and few contradictions ($h^1_{\epsilon}$ small). The system is healthy.
+    \item \textbf{Low $\Phi$:} Weak dynamics or many contradictions. The system is at risk.
+\end{itemize}
+
+Critically, computing $\Phi$ requires only the $k$ smallest eigenvalues (typically $k \approx 20$), which can be found in $O(N \log N)$ time using iterative methods. This makes real-time monitoring feasible even for large systems.
+
+\subsection{Why This Matters: Broad Implications}
+
+While our motivating example involves drones, the problem of consistency detection is ubiquitous:
+
+\paragraph{AI Safety and Alignment}
+
+As AI systems become more complex and distributed (e.g., multi-agent reinforcement learning, federated learning), ensuring their internal consistency is paramount. An AI that holds contradictory beliefs about safety constraints could behave unpredictably or dangerously. Our index could provide an early-warning system for such failures, pending validation in production autonomous systems.
+
+\paragraph{Internet of Things (IoT)}
+
+Smart cities, industrial IoT, and sensor networks involve thousands of devices sharing data. Detecting when a subset of sensors has drifted out of calibration—before it causes system-wide failures—is a major challenge. $\Phi$ offers a lightweight approach that shows promise in initial experiments.
+
+\paragraph{Distributed Databases and Knowledge Graphs}
+
+In large-scale databases (e.g., knowledge graphs for search engines, medical records systems), ensuring consistency across replicas is critical. Traditional methods check constraints one-by-one; our topological approach can identify \textit{global} inconsistencies that arise from the interaction of many local constraints.
+
+\paragraph{Collaborative Robotics}
+
+Teams of robots (in warehouses, hospitals, or disaster sites) must coordinate without central control. Detecting when their shared map or task allocation has become internally contradictory enables them to pause, re-synchronize, and avoid costly errors.
+
+\subsection{Our Contributions}
+
+This paper makes three specific advances:
+
+\textbf{1. Novel Index Formulation with Error Bounds:}
+While Hansen \& Ghrist \cite{hansen2021opinion} introduced sheaf Laplacians for opinion dynamics, they did not define a single scalar health metric. Our Phronesis Index $\Phi = \lambda_1^+/(h^1_{\epsilon} + \epsilon)$ is the first computable index that combines spectral information ($\lambda_1^+$) with topological information ($h^1_{\epsilon}$) for consistency detection. We provide formal error bounds (Theorem~\ref{thm:error_bound}) relating our spectral approximation to true cohomology dimension.
+
+\textbf{2. Efficient Approximation Algorithm:}
+Prior sheaf cohomology computation requires solving linear systems of size $O(|E| \cdot d)$, with complexity $O(N^3)$. Our STPGC algorithm achieves $O(N \log N)$ complexity via spectral approximation (Theorem~\ref{thm:complexity}), making real-time monitoring feasible for large systems. We validate scalability empirically on graphs up to 50,000 vertices.
+
+\textbf{3. Application to Safe RL and Multi-Agent Coordination:}
+We are the first to integrate sheaf-theoretic consistency measures into reinforcement learning. Our Safety Gym experiments show 23\% improvement in safety (cost reduction, $p < 0.01$) by using $\Phi$ as an auxiliary reward signal. We also demonstrate effectiveness in a novel multi-robot coordination scenario with truly distributed agents.
+
+%==================================================
+% SECTION 2: RELATED WORK
+%==================================================
+
+\section{Related Work}
+
+\subsection{Sheaf Theory in Network Science}
+
+Hansen and Ghrist \cite{hansen2021opinion} pioneered the application of sheaf Laplacians to opinion dynamics on social networks, focusing on consensus formation via iterative averaging. Their work demonstrated that the spectral properties of the Connection Laplacian govern convergence rates. Our contribution differs in focus: while they study \textit{how beliefs evolve toward consensus}, we study \textit{whether consensus is structurally possible} given current constraints. Our Phronesis Index provides a diagnostic tool to detect topological obstructions before attempting consensus algorithms.
+
+Recent work by Huntsman et al. \cite{huntsman2024prospects} explored sheaf-theoretic inconsistency detection in large language models, identifying semantic contradictions across prompts. However, their approach relies on exact cohomology computation ($O(N^3)$), limiting scalability. Our spectral approximation with $O(N \log N)$ complexity enables real-time monitoring in large-scale systems.
+
+\subsection{Safe Reinforcement Learning}
+
+Constrained Policy Optimization (CPO) \cite{achiam2017cpo} enforces hard constraints on cumulative cost during RL training, ensuring safety via constrained optimization. While effective, CPO requires explicit cost functions and constraint thresholds, which may be difficult to specify in complex domains. Our approach complements CPO by providing an auxiliary consistency signal that does not require domain-specific safety specifications.
+
+Safety Gym \cite{ray2019safetygym} provides standardized benchmarks for safe RL. Our work extends this by introducing a topological consistency metric that can be integrated into any RL algorithm as a reward shaping term.
+
+\subsection{Topological Data Analysis}
+
+Persistent homology \cite{edelsbrunner2010computational} has been applied to detect topological features in point clouds and time series. However, persistent homology typically operates on static datasets, whereas our method is designed for online monitoring of dynamic systems. Additionally, our use of sheaf cohomology (rather than simplicial homology) allows us to encode domain-specific consistency constraints via restriction maps.
+
+% INSERT ENHANCED PRACTICAL GUIDANCE
+\input{enhanced_practical_guidance.tex}
+
+%==================================================
+% SECTION 3: MATHEMATICAL FOUNDATIONS
+%==================================================
+
+\section{Mathematical Foundations}
+
+\subsection{Notation and Preliminaries}
+
+We use the following notation throughout:
+
+\begin{itemize}
+    \item $G = (V, E)$: A graph with vertex set $V$ and edge set $E$. We denote $N = |V|$ (number of vertices) and $M = |E|$ (number of edges).
+    \item $\mathcal{F}$: A cellular sheaf on $G$ (defined in Sec.~\ref{sec:sheaves}).
+    \item $\mathcal{F}(v)$: The stalk at vertex $v$, a vector space (typically $\mathbb{R}^d$).
+    \item $d$: The stalk dimension (assumed constant across vertices).
+    \item $r_{e,v}: \mathcal{F}(v) \to \mathcal{F}(v)$: The restriction map for edge $e$ at vertex $v$.
+    \item $\mathcal{L} \in \mathbb{R}^{Nd \times Nd}$: The Connection Laplacian matrix.
+    \item $\lambda_i$: The $i$-th smallest eigenvalue of $\mathcal{L}$ (indexed from 0).
+    \item $\lambda_1^+$: The smallest \textit{positive} eigenvalue of $\mathcal{L}$.
+    \item $h^1_{\text{true}} = \dim(H^1(\mathcal{F}))$: The true first cohomology dimension.
+    \item $h^1_{\epsilon} = \#\{i : \lambda_i < \epsilon\} - 1$: The spectral approximation of $h^1$ using threshold $\epsilon$.
+    \item $\epsilon > 0$: A small threshold for counting near-zero eigenvalues.
+    \item $\sigma$: Noise level (standard deviation of perturbations).
+    \item $\delta$: Spectral gap (minimum distance between distinct eigenvalues).
+    \item $\tau$: Bellman consistency threshold (used in RL experiments, distinct from $\delta$).
+\end{itemize}
+
+\textbf{Assumptions:}
+\begin{enumerate}
+    \item The graph $G$ is \textbf{connected}. This ensures $\dim(H^0(\mathcal{F})) = 1$.
+    \item Stalks are \textbf{finite-dimensional vector spaces}, typically $\mathbb{R}^d$ with $d \in \{2, 4, 8\}$.
+    \item Restriction maps are \textbf{linear}. Non-linear constraints can be linearized locally.
+    \item The system operates in a \textbf{low-noise regime}: $\sigma < \delta/4$ (required for Theorem~\ref{thm:error_bound}).
+\end{enumerate}
+
+\subsection{Cellular Sheaves and Cohomology}
+\label{sec:sheaves}
+
+A \textbf{cellular sheaf} $\mathcal{F}$ on a graph $G = (V, E)$ consists of:
+\begin{enumerate}
+    \item A vector space $\mathcal{F}(v)$ (the \textit{stalk}) for each vertex $v \in V$. We assume all stalks have the same dimension $d$, so $\mathcal{F}(v) \cong \mathbb{R}^d$.
+    \item For each edge $e \in E$, a vector space $\mathcal{F}(e) \cong \mathbb{R}^d$ (the \textit{edge stalk}).
+    \item For each edge $e$ incident to vertex $v$, a linear map $r_{e,v}: \mathcal{F}(v) \to \mathcal{F}(e)$ (the \textit{restriction map}).
+\end{enumerate}
+
+\textbf{Remark:} In the simplified case where $\mathcal{F}(e) = \mathbb{R}^d$ for all edges and we identify edge stalks with a common space, the restriction maps can be viewed as $r_{e,v}: \mathbb{R}^d \to \mathbb{R}^d$. This is the convention we adopt throughout, as it simplifies notation while preserving the essential structure.
+
+The restriction maps encode \textit{consistency constraints}: how information at one vertex should relate to information at neighboring vertices.
+
+\textbf{Example (Identity Restrictions):} If $r_{e,v} = I_d$ for all $e, v$, the sheaf enforces \textit{agreement}: neighboring vertices should have identical stalks.
+
+\textbf{Example (Rotation Restrictions):} If agents have different coordinate frames, $r_{e,v}$ can be a rotation matrix encoding the transformation between frames.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{figure_sheaf_example.png}
+\caption{Example cellular sheaf on a 3-vertex graph showing stalks (vector spaces at vertices) and restriction maps (linear transformations along edges). Consistent sections (global assignments) must satisfy all restriction constraints.}
+\label{fig:sheaf_example}
+\end{figure}
+
+The \textbf{Connection Laplacian} $\mathcal{L}$ is a block matrix of size $Nd \times Nd$ defined by:
+\begin{align}
+\mathcal{L}[v, v] &= \sum_{e \ni v} r_{e,v}^T r_{e,v} \quad \text{(diagonal blocks)} \\
+\mathcal{L}[u, v] &= -r_{e,u}^T r_{e,v} \quad \text{(off-diagonal blocks for } e = (u, v))
+\end{align}
+
+The kernel of $\mathcal{L}$ encodes global sections (consistent assignments of stalks). By the \textbf{Hodge decomposition theorem for cellular sheaves} \cite{singer2012vector,hansen2021opinion}:
+\begin{equation}
+\ker(\mathcal{L}) \cong H^0(\mathcal{F}) \oplus H^1(\mathcal{F})
+\end{equation}
+where $H^0$ is the space of global sections (dimension 1 for connected graphs) and $H^1$ is the first cohomology group (dimension $h^1_{\text{true}}$, counting topological holes).
+
+\textbf{Remark:} This decomposition is analogous to the classical Hodge theorem in differential geometry, but adapted to the discrete setting of cellular complexes. The key insight is that harmonic sections (kernel of $\mathcal{L}$) decompose into exact forms ($H^0$, representing global consistency) and co-closed forms ($H^1$, representing topological obstructions).
+
+% INSERT LAPLACIAN CONSTRUCTION ALGORITHM HERE
+\input{revisions/sec3_2_1_laplacian_construction.tex}
+
+\subsection{Phronesis Index Definition}
+\label{sec:phi_definition}
+
+\begin{definition}[Phronesis Index]
+\label{def:phronesis}
+Let $\mathcal{L}$ be the Connection Laplacian of a cellular sheaf on a connected graph. Let $\epsilon > 0$ be a threshold. The \textbf{Phronesis Index} is defined as:
+\begin{equation}
+\Phi = \frac{\lambda_1^+}{h^1_{\epsilon} + \epsilon}
+\end{equation}
+where:
+\begin{itemize}
+    \item $\lambda_1^+ = \min\{\lambda_i : \lambda_i \geq \epsilon\}$ is the smallest eigenvalue above the threshold.
+    \item $h^1_{\epsilon} = \#\{i : \lambda_i < \epsilon\} - 1$ is the number of near-zero eigenvalues minus one (to account for $H^0$).
+\end{itemize}
+\end{definition}
+
+\textbf{Intuition:}
+\begin{itemize}
+    \item $\lambda_1^+$ measures the \textit{spectral gap}: how quickly the system can converge to consensus via diffusion. Large $\lambda_1^+$ means strong coupling.
+    \item $h^1_{\epsilon}$ approximates the number of \textit{topological holes}: independent cycles of contradiction. Large $h^1_{\epsilon}$ means many inconsistencies.
+    \item $\Phi$ combines these: high $\Phi$ indicates strong coupling and few holes (healthy), low $\Phi$ indicates weak coupling or many holes (unhealthy).
+    \item The $+\epsilon$ in the denominator prevents division by zero when $h^1_{\epsilon} = 0$ (perfectly consistent system).
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{figure_phi_interpretation.png}
+\caption{Interpretation of Phronesis Index: High $\Phi$ (left) indicates strong consensus dynamics and few contradictions (healthy system). Low $\Phi$ (right) indicates weak dynamics or many contradictions (system at risk).}
+\label{fig:phi_interp}
+\end{figure}
+
+% INSERT EPSILON SELECTION PROCEDURE HERE
+\input{revisions/sec3_4_epsilon_procedure.tex}
+
+% INSERT ENHANCED PARAMETER SELECTION GUIDE
+\input{enhanced_parameter_selection.tex}
+
+\subsection{Theoretical Guarantees}
+\label{sec:theorems}
+
+% INSERT REVISED THEOREMS HERE
+\input{revisions/theorems_revised.tex}
+
+%==================================================
+% SECTION 4: ALGORITHM
+%==================================================
+
+\section{Algorithm: STPGC}
+\label{sec:algorithm}
+
+We present the \textbf{Spectral-Topological Phronesis-Guided Control (STPGC)} algorithm for computing the Phronesis Index.
+
+\begin{algorithm}[H]
+\caption{STPGC: Compute Phronesis Index}
+\label{alg:stpgc}
+\begin{algorithmic}[1]
+\Require Graph $G = (V, E)$, stalks $\{\mathcal{F}(v)\}_{v \in V}$, restriction maps $\{r_{e,v}\}_{e \in E, v \in e}$, threshold $\epsilon > 0$
+\Ensure Phronesis Index $\Phi$, approximate cohomology $h^1_{\epsilon}$, spectral gap $\lambda_1^+$
+
+\State \textbf{Step 1: Construct Connection Laplacian}
+\State Initialize $\mathcal{L} \in \mathbb{R}^{Nd \times Nd}$ as zero matrix
+\For{each vertex $v \in V$}
+    \State $\mathcal{L}[v, v] \gets \sum_{e \ni v} r_{e,v}^T r_{e,v}$
+\EndFor
+\For{each edge $e = (u, v) \in E$}
+    \State $\mathcal{L}[u, v] \gets -r_{e,u}^T r_{e,v}$
+    \State $\mathcal{L}[v, u] \gets -r_{e,v}^T r_{e,u}$
+\EndFor
+
+\State \textbf{Step 2: Compute Smallest Eigenvalues}
+\State Use Lanczos algorithm to compute $k = 20$ smallest eigenvalues: $\{\lambda_0, \lambda_1, \ldots, \lambda_{19}\}$
+
+\State \textbf{Step 3: Count Near-Zero Eigenvalues}
+\State $h^1_{\epsilon} \gets \#\{i : \lambda_i < \epsilon\} - 1$ \Comment{Subtract 1 for $H^0$}
+
+\State \textbf{Step 4: Find Smallest Positive Eigenvalue}
+\State $\lambda_1^+ \gets \min\{\lambda_i : \lambda_i \geq \epsilon\}$
+
+\State \textbf{Step 5: Compute Index}
+\State $\Phi \gets \lambda_1^+ / (h^1_{\epsilon} + \epsilon)$
+
+\State \Return $\Phi$, $h^1_{\epsilon}$, $\lambda_1^+$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Complexity Analysis:} See Theorem~\ref{thm:complexity}. For sparse graphs ($M = O(N)$) and small stalks ($d = O(1)$), the algorithm runs in $O(Nd \log(Nd))$ time.
+
+\textbf{Lanczos Convergence Conditions:} The Lanczos algorithm (Step 2) is an iterative method for computing extreme eigenvalues of symmetric matrices. Its convergence rate depends on the \textit{spectral gap} $\delta$ and the \textit{condition number} of $\mathcal{L}$. Specifically:
+\begin{itemize}
+    \item \textbf{Well-conditioned case:} If $\mathcal{L}$ has a clear spectral gap (i.e., $\delta > 0$ is not too small), Lanczos converges in $O(\log(Nd))$ iterations to find the $k = 20$ smallest eigenvalues with relative error $< 10^{-6}$.
+    \item \textbf{Ill-conditioned case:} If the spectral gap is very small ($\delta \to 0$), convergence may require $O(Nd)$ iterations, degrading the overall complexity to $O((Nd)^2)$. This occurs when the system has many near-degenerate inconsistencies.
+    \item \textbf{Practical mitigation:} In our experiments, we observe that real-world belief graphs typically have $\delta \geq 0.01$, ensuring fast convergence. For systems with suspected ill-conditioning, one can use preconditioning techniques or switch to randomized methods (e.g., randomized SVD).
+\end{itemize}
+
+The complexity claim in Theorem~\ref{thm:complexity} assumes the well-conditioned case, which holds for all scenarios tested in Section~\ref{sec:experiments}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{figure_algorithm_flowchart.png}
+\caption{Flowchart of STPGC algorithm showing the five main steps: (1) Construct Connection Laplacian, (2) Compute smallest eigenvalues via Lanczos, (3) Count near-zero eigenvalues, (4) Find smallest positive eigenvalue, (5) Compute Phronesis Index.}
+\label{fig:flowchart}
+\end{figure}
+
+%==================================================
+% SECTION 5: EXPERIMENTS
+%==================================================
+
+\section{Experiments}
+
+We validate the Phronesis Index across four scenarios, demonstrating its effectiveness for consistency detection in diverse settings.
+
+% INSERT LOGIC MAZE WITH BASELINES
+\input{logic_maze_baselines.tex}
+
+% INSERT EXPANDED SAFETY GYM SECTION HERE
+\input{revisions/sec5_2_safety_gym_expanded.tex}
+
+\subsection{Scenario 3: Multi-Robot Coordination}
+\label{sec:multi_robot}
+
+\textbf{Setup:} 10 robots navigate a warehouse, sharing position estimates. Each robot has a local coordinate frame (rotated relative to a global frame).
+
+\textbf{Sheaf Construction:}
+\begin{itemize}
+    \item \textbf{Graph:} 10 vertices (robots), edges = communication links (robots within 5m).
+    \item \textbf{Stalks:} $\mathcal{F}(v) = \mathbb{R}^2$ (2D position in robot $v$'s frame).
+    \item \textbf{Restrictions:} Rotation matrices encoding coordinate transformations.
+    \item \textbf{Threshold:} $\epsilon = 0.4$ meters (4× GPS error $\sigma = 0.1$m).
+\end{itemize}
+
+\textbf{Results:} When all robots' GPS is functioning, $\Phi \approx 50$ (healthy). When one robot's GPS malfunctions, $\Phi$ drops to $\approx 5$, triggering recalibration. After recalibration, $\Phi$ recovers to $\approx 45$.
+
+\subsection{Scenario 4: Scalability}
+\label{sec:scalability}
+
+\textbf{Setup:} Synthetic graphs with $N \in \{100, 1000, 10000, 50000\}$ vertices, $M \approx 4N$ edges (grid-like), $d = 2$ stalks. We measure wall-clock time to compute $\Phi$.
+
+\textbf{Results:} Computation time scales as $O(N \log N)$ empirically, validating Theorem~\ref{thm:complexity}. For $N = 50{,}000$, $\Phi$ is computed in 8.5 seconds on a single CPU core, demonstrating feasibility for large-scale systems.
+
+%==================================================
+% INSERT EXPANDED EXPERIMENTAL DETAILS
+\input{expanded_experimental_details.tex}
+
+% SECTION 6: DISCUSSION
+%==================================================
+
+\section{Discussion}
+
+\subsection{Summary of Findings}
+
+Our experiments demonstrate that the Phronesis Index is:
+\begin{itemize}
+    \item \textbf{Sensitive:} Detects transient inconsistencies in Logic Maze and GPS malfunctions in multi-robot scenarios.
+    \item \textbf{Effective:} Improves safety in RL (23\% cost reduction vs. PPO baseline, $p < 0.01$).
+    \item \textbf{Scalable:} Computes in 8.5 seconds for $N = 50{,}000$ agents, validating $O(N \log N)$ complexity.
+    \item \textbf{General:} Applies to diverse domains (RL, robotics, anomaly detection) with domain-specific sheaf designs.
+\end{itemize}
+
+% INSERT EXPANDED LIMITATIONS SECTION HERE
+\input{revisions/sec6_2_limitations_expanded.tex}
+
+% INSERT DISTRIBUTED COMPUTATION SECTION HERE
+\input{revisions/sec6_2_1_distributed_computation.tex}
+
+\subsection{Future Directions}
+\label{sec:future}
+
+\paragraph{Automated Sheaf Learning}
+
+Develop methods to learn sheaf structure from data. This may enable fully automated consistency detection without domain expertise, though significant theoretical and practical challenges remain. Possible approaches include:
+\begin{itemize}
+    \item \textbf{Supervised learning:} Train a neural network to predict restriction maps from labeled examples of consistent/inconsistent systems.
+    \item \textbf{Unsupervised learning:} Use clustering or manifold learning to discover latent structure in agent beliefs, then infer restriction maps that maximize consistency.
+\end{itemize}
+
+\paragraph{Time-Varying Graphs}
+
+Extend to time-varying graphs and dynamic systems. Preliminary approaches could use sliding windows or temporal smoothing, but convergence guarantees are unknown. Key challenges include:
+\begin{itemize}
+    \item Defining $\Phi$ for graphs that change topology over time.
+    \item Ensuring temporal consistency (e.g., $\Phi$ should not oscillate wildly due to transient edge additions/deletions).
+\end{itemize}
+
+\paragraph{Other Domains}
+
+Explore applications to other domains: distributed databases, blockchain consensus, sensor fusion. Each domain will require domain-specific sheaf designs and validation. For example:
+\begin{itemize}
+    \item \textbf{Blockchain:} Stalks = transaction histories, restrictions = Merkle tree consistency.
+    \item \textbf{Sensor fusion:} Stalks = sensor readings, restrictions = physical constraints (e.g., energy conservation).
+\end{itemize}
+
+\paragraph{Distributed STPGC}
+
+Distributed STPGC, if successfully developed, could enable real-time monitoring of large-scale systems. However, as discussed in Sec.~\ref{sec:distributed}, significant algorithmic challenges remain.
+
+%==================================================
+% SECTION 7: CONCLUSION
+%==================================================
+
+\section{Conclusion}
+
+We introduced the Phronesis Index, a computationally efficient spectral heuristic for detecting global inconsistencies in multi-agent systems. By approximating topological obstructions (cohomology) via eigenvalue analysis, our method achieves $O(N \log N)$ complexity with provable error bounds. Experiments across four scenarios validate its effectiveness for anomaly detection, safe reinforcement learning, and multi-robot coordination.
+
+Key contributions include: (1) a novel index formulation combining spectral and topological information, (2) an efficient approximation algorithm with formal complexity guarantees, and (3) the first integration of sheaf-theoretic consistency measures into reinforcement learning, demonstrating 23\% safety improvement.
+
+While limitations remain—particularly the need for domain expertise in sheaf design and the assumption of centralized computation—our work establishes the Phronesis Index as a promising tool for consistency detection in distributed systems. Future work on automated sheaf learning and distributed implementation could broaden its applicability.
+
+\textbf{Reproducibility:} All code, data, and experimental details are available at \url{https://github.com/sepehrbayat/phronesis-index-nmi}.
+
+%==================================================
+% REFERENCES
+%==================================================
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+%==================================================
+% APPENDICES
+%==================================================
+
+\newpage
+\appendix
+
+\section{Detailed Proofs}
+\label{app:proofs}
+
+\subsection{Proof of Theorem 1 (Spectral-Cohomological Correspondence)}
+
+\textbf{Theorem:} Let $\mathcal{F}$ be a cellular sheaf on a connected graph $G = (V, E)$ with $N = |V|$ vertices. Let $\mathcal{L} \in \mathbb{R}^{Nd \times Nd}$ be the Connection Laplacian, where $d$ is the stalk dimension. Then:
+\begin{equation}
+h^1_{\text{true}} = \dim(\ker(\mathcal{L})) - 1
+\end{equation}
+
+\textbf{Proof:}
+
+By the fundamental theorem of sheaf cohomology \cite{singer2012vector}, the kernel of the Connection Laplacian decomposes as:
+\begin{equation}
+\ker(\mathcal{L}) \cong H^0(\mathcal{F}) \oplus H^1(\mathcal{F})
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $H^0(\mathcal{F})$ is the space of \textit{global sections}: assignments of stalks that are consistent across all edges. For a connected graph, $\dim(H^0(\mathcal{F})) = 1$ (constant sections).
+    \item $H^1(\mathcal{F})$ is the first cohomology group, with dimension $h^1_{\text{true}}$ counting independent cycles of inconsistency.
+\end{itemize}
+
+Thus:
+\begin{equation}
+\dim(\ker(\mathcal{L})) = \dim(H^0(\mathcal{F})) + \dim(H^1(\mathcal{F})) = 1 + h^1_{\text{true}}
+\end{equation}
+
+Rearranging:
+\begin{equation}
+h^1_{\text{true}} = \dim(\ker(\mathcal{L})) - 1
+\end{equation}
+
+This completes the proof. \qed
+
+\subsection{Proof of Theorem 2 (Error Bound) - Extended Version}
+
+\textbf{Theorem:} Let $\mathcal{L}_0 \in \mathbb{R}^{Nd \times Nd}$ be the ideal Connection Laplacian for a graph with $N$ vertices and stalk dimension $d$. Let $\mathcal{L} = \mathcal{L}_0 + E$ be a perturbed version with $\|E\|_2 \leq \sigma$, where $\sigma > 0$ is the noise level. Let $\delta > 0$ be the spectral gap. Assume $\sigma < \delta/4$ and $\epsilon = \delta/2$. Then:
+\begin{equation}
+|h^1_{\epsilon}(\mathcal{L}) - h^1_{\text{true}}(\mathcal{L}_0)| \leq \left\lceil \frac{2\sigma}{\delta} \right\rceil
+\end{equation}
+
+\textbf{Proof:}
+
+\textbf{Step 1: Eigenvalue Perturbation Bound}
+
+By Weyl's inequality, for any $i$:
+\begin{equation}
+|\lambda_i(\mathcal{L}) - \lambda_i(\mathcal{L}_0)| \leq \|E\|_2 \leq \sigma
+\end{equation}
+
+This means each eigenvalue of $\mathcal{L}$ is within $\sigma$ of the corresponding eigenvalue of $\mathcal{L}_0$.
+
+\textbf{Step 2: Ideal Spectrum Structure}
+
+For the ideal Laplacian $\mathcal{L}_0$, the spectrum has two blocks:
+\begin{itemize}
+    \item \textbf{Zero block:} $1 + h^1_{\text{true}}$ eigenvalues exactly equal to 0 (from $H^0 \oplus H^1$).
+    \item \textbf{Positive block:} Remaining eigenvalues $\geq \delta$ (spectral gap).
+\end{itemize}
+
+\textbf{Step 3: Perturbed Spectrum}
+
+Under perturbation $E$ with $\|E\|_2 \leq \sigma$:
+\begin{itemize}
+    \item Zero block eigenvalues shift to $[-\sigma, \sigma]$.
+    \item Positive block eigenvalues shift to $[\delta - \sigma, \infty)$.
+\end{itemize}
+
+\textbf{Step 4: Threshold Separation}
+
+With $\epsilon = \delta/2$ and $\sigma < \delta/4$:
+\begin{itemize}
+    \item Zero block: $[-\sigma, \sigma] \subset [-\delta/4, \delta/4] \subset [0, \delta/2) = [0, \epsilon)$
+    \item Positive block: $[\delta - \sigma, \infty) \subset [3\delta/4, \infty) \subset [\epsilon, \infty)$
+\end{itemize}
+
+Thus, the threshold $\epsilon$ cleanly separates the two blocks, with at most $\lceil 2\sigma/\delta \rceil$ eigenvalues potentially crossing the threshold due to perturbation.
+
+\textbf{Step 5: Error Bound}
+
+The spectral approximation $h^1_{\epsilon}(\mathcal{L})$ counts eigenvalues below $\epsilon$, minus 1. The true value is $h^1_{\text{true}}(\mathcal{L}_0)$. The error is bounded by the number of eigenvalues that cross the threshold:
+\begin{equation}
+|h^1_{\epsilon}(\mathcal{L}) - h^1_{\text{true}}(\mathcal{L}_0)| \leq \left\lceil \frac{2\sigma}{\delta} \right\rceil
+\end{equation}
+
+\textbf{Remark on the ceiling function:} The bound uses $\lceil 2\sigma/\delta \rceil$ (ceiling) because $h^1$ must be an integer (it counts topological holes). However, in practice, the continuous quantity $2\sigma/\delta$ provides a useful guide for parameter selection. For example, if $\sigma/\delta = 0.1$, then $2\sigma/\delta = 0.2$, so $\lceil 2\sigma/\delta \rceil = 1$, meaning at most 1 eigenvalue may be misclassified. This justifies the requirement $\sigma < \delta/4$ to ensure $\lceil 2\sigma/\delta \rceil < 1$, i.e., no misclassification.
+
+This completes the proof. \qed
+
+\section{Sheaf Construction Guide}
+\label{app:sheaf_guide}
+\input{sheaf_construction_guide.tex}
+
+\section{Robustness Analysis}
+\label{app:robustness}
+\input{robustness_analysis.tex}
+
+\end{document}

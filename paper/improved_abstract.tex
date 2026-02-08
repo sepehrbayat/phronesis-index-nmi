@@ -1,0 +1,11 @@
+\begin{abstract}
+\textbf{Background:} Multi-agent systems—from robot teams to distributed AI—must maintain internally consistent beliefs to operate safely. However, detecting \textit{global} inconsistencies (contradictions that span multiple agents) is computationally expensive, often requiring $O(N^3)$ operations for $N$ agents.
+
+\textbf{Method:} We introduce the \textbf{Phronesis Index} ($\Phi$), a single number that quantifies how consistent a system's collective beliefs are. Our approach uses ideas from algebraic topology: contradictions manifest as "holes" in the network's knowledge structure, which we detect by analyzing the eigenvalues of a matrix called the Connection Laplacian. This reduces computation to $O(N \log N)$ with provable accuracy guarantees.
+
+\textbf{Results:} We validate $\Phi$ across four scenarios: (1) anomaly detection in a grid-world navigation task, (2) safe reinforcement learning in Safety Gym (23\% reduction in safety violations, $p < 0.01$), (3) multi-robot coordination with GPS failures, and (4) scalability tests up to 50,000 agents (8.5 seconds on a single CPU core). Statistical analysis over 10 independent runs confirms robustness.
+
+\textbf{Impact:} Our method provides a computationally efficient, domain-agnostic tool for monitoring consistency in distributed systems. Potential applications include AI safety (detecting contradictory safety constraints), IoT networks (identifying miscalibrated sensors), and collaborative robotics (ensuring shared situational awareness). We provide comprehensive guidance for practitioners and release all code and data publicly.
+
+\textbf{Availability:} \url{https://github.com/sepehrbayat/phronesis-index}
+\end{abstract}

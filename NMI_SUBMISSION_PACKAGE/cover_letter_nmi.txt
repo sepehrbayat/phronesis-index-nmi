@@ -1,0 +1,31 @@
+Dear Editor-in-Chief,
+
+We are pleased to submit our original research manuscript, "Spectral Sheaf Heuristics for Consistency Detection in Multi-Agent Systems," for consideration for publication in Nature Machine Intelligence.
+
+This work introduces a novel, computationally efficient method for ensuring the reliability and safety of complex, decentralized AI systems — a topic of central importance to the field of machine intelligence.
+
+Modern multi-agent systems, from autonomous vehicle fleets to distributed sensor networks, are vulnerable to subtle global inconsistencies that can lead to catastrophic failures. This paper addresses this critical gap by formalizing the problem of consistency detection using the mathematical framework of cellular sheaf theory.
+
+Key novelties:
+
+1. Novel Formulation: We introduce the Phronesis Index (Φ), the first computable metric combining spectral information (the spectral gap) with topological information (cohomology) for robust consistency detection in multi-agent systems.
+
+2. Computational Efficiency: Our method achieves O(N log N) complexity, a significant improvement over O(N³) for exact methods, validated up to 50,000 agents.
+
+3. Provable Guarantees: We provide formal error bounds (Theorem 2) ensuring reliability under noisy conditions.
+
+4. Comprehensive Validation: We demonstrate effectiveness across four diverse domains, including a statistically significant 23% improvement in safety (p < 0.01) for reinforcement learning agents.
+
+5. Practical Guidance: We provide step-by-step procedures for sheaf construction and parameter selection.
+
+All code and data are available at:
+  https://github.com/sepehrbayat/phronesis-index-nmi
+  Release tag: v1.0-nmi-submission
+
+We confirm that this manuscript is original, has not been published elsewhere, and is not currently under consideration by another journal.
+
+Sincerely,
+
+Sepehr Bayat
+Hooshex AI Lab
+sepehrbayat@hooshex.com

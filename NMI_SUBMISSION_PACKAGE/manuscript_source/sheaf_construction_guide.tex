@@ -1,0 +1,561 @@
+% Comprehensive Sheaf Construction Guide
+% Addressing Reviewer 2's Primary Concern
+
+\section{Practical Guide to Sheaf Construction}
+\label{sec:sheaf_construction_guide}
+
+This section provides step-by-step guidance for constructing cellular sheaves for multi-agent consistency monitoring. We present general principles followed by detailed walk-throughs of our three experimental scenarios.
+
+%--------------------------------------------------
+
+\subsection{General Principles}
+
+\subsubsection{Step 1: Identify the Belief Graph}
+
+\textbf{Question:} What is the underlying network structure?
+
+\textbf{Action:} Define the graph $G = (V, E)$ where:
+\begin{itemize}
+    \item \textbf{Vertices $V$:} Represent \textit{belief states} or \textit{knowledge locations}
+    \begin{itemize}
+        \item In multi-agent systems: vertices = agents or local knowledge bases
+        \item In state-space problems: vertices = states or situations
+        \item In sensor networks: vertices = sensor nodes or spatial locations
+    \end{itemize}
+    
+    \item \textbf{Edges $E$:} Represent \textit{consistency relationships} or \textit{information flow}
+    \begin{itemize}
+        \item Connect vertices that share information or have overlapping beliefs
+        \item In physical systems: edges = communication links or spatial adjacency
+        \item In logical systems: edges = inference steps or constraint relationships
+    \end{itemize}
+\end{itemize}
+
+\textbf{Example:} In a team of 3 robots exploring an environment:
+\begin{itemize}
+    \item Vertices: Robot 1, Robot 2, Robot 3
+    \item Edges: (Robot 1, Robot 2), (Robot 2, Robot 3), (Robot 3, Robot 1) if they communicate in a triangle topology
+\end{itemize}
+
+\subsubsection{Step 2: Define the Stalks (Local Data)}
+
+\textbf{Question:} What information does each vertex hold?
+
+\textbf{Action:} For each vertex $v \in V$, define the stalk $\mathcal{F}(v)$ as a vector space representing the local belief or data:
+\begin{itemize}
+    \item \textbf{Dimension $d$:} Depends on the type of information
+    \begin{itemize}
+        \item Scalar beliefs: $d = 1$ (e.g., temperature readings)
+        \item Vector beliefs: $d = 2, 3, \ldots$ (e.g., 2D positions, RGB colors, Q-values for multiple actions)
+        \item Structured beliefs: $d$ = size of feature vector
+    \end{itemize}
+    
+    \item \textbf{Interpretation:} Each element of $\mathcal{F}(v) \cong \mathbb{R}^d$ represents a possible belief state at vertex $v$
+\end{itemize}
+
+\textbf{Example:} For robots tracking a target:
+\begin{itemize}
+    \item $\mathcal{F}(\text{Robot 1}) = \mathbb{R}^2$: Robot 1's belief about target position $(x, y)$
+    \item Similarly for Robot 2 and Robot 3
+\end{itemize}
+
+\subsubsection{Step 3: Define Restriction Maps (Consistency Constraints)}
+
+\textbf{Question:} What does it mean for two neighboring vertices to be "consistent"?
+
+\textbf{Action:} For each edge $e = (u, v) \in E$, define restriction maps $r_{e,u}: \mathcal{F}(u) \to \mathcal{F}(e)$ and $r_{e,v}: \mathcal{F}(v) \to \mathcal{F}(e)$ that encode the consistency requirement.
+
+\textbf{Common Patterns:}
+
+\paragraph{Pattern A: Identity Consistency (Agreement)}
+If $u$ and $v$ should hold identical beliefs:
+\begin{equation}
+r_{e,u} = r_{e,v} = I \quad (\text{identity map})
+\end{equation}
+Then consistency means $x_u = x_v$.
+
+\paragraph{Pattern B: Linear Transformation Consistency}
+If beliefs are related by a known transformation $T$:
+\begin{equation}
+r_{e,u} = I, \quad r_{e,v} = T
+\end{equation}
+Then consistency means $x_u = T(x_v)$.
+
+\textbf{Example:} Robots with different coordinate frames:
+\begin{itemize}
+    \item Robot 1 uses global coordinates
+    \item Robot 2 uses local coordinates (rotated by $\theta$)
+    \item Restriction map: $r_{e, \text{Robot 2}} = R_{\theta}$ (rotation matrix)
+    \item Consistency: Robot 1's global position = $R_{\theta} \times$ Robot 2's local position
+\end{itemize}
+
+\paragraph{Pattern C: Projection or Aggregation}
+If one vertex has more information than another:
+\begin{equation}
+r_{e,u}: \mathbb{R}^{d_u} \to \mathbb{R}^{d_e}, \quad r_{e,v}: \mathbb{R}^{d_v} \to \mathbb{R}^{d_e}
+\end{equation}
+where $d_e \leq \min(d_u, d_v)$.
+
+\textbf{Example:} Sensor fusion:
+\begin{itemize}
+    \item Sensor A measures $(x, y, z)$ position
+    \item Sensor B measures $(x, y)$ position (no depth)
+    \item Edge stalk: $\mathcal{F}(e) = \mathbb{R}^2$
+    \item $r_{e,A}$: project $(x, y, z) \mapsto (x, y)$
+    \item $r_{e,B}$: identity $(x, y) \mapsto (x, y)$
+    \item Consistency: Sensor A's $(x, y)$ projection matches Sensor B's $(x, y)$
+\end{itemize}
+
+\subsubsection{Step 4: Construct the Connection Laplacian}
+
+\textbf{Action:} Build the matrix $\mathcal{L}$ of size $Nd \times Nd$ where $N = |V|$ and $d$ is the stalk dimension.
+
+\textbf{Block Structure:}
+\begin{equation}
+\mathcal{L} = D - A
+\end{equation}
+where:
+\begin{itemize}
+    \item $D$: Block-diagonal degree matrix
+    \begin{equation}
+    D_{vv} = \deg(v) \cdot I_d
+    \end{equation}
+    
+    \item $A$: Block adjacency matrix with restriction maps
+    \begin{equation}
+    A_{uv} = r_{e,v}^T r_{e,u} \quad \text{if } e = (u,v) \in E
+    \end{equation}
+\end{itemize}
+
+\textbf{Intuition:} The Laplacian measures "how much" local beliefs disagree when propagated through restriction maps.
+
+\subsubsection{Step 5: Validate the Sheaf}
+
+\textbf{Checklist:}
+\begin{enumerate}
+    \item \textbf{Regularity:} Are restriction maps linear? (Required for spectral methods)
+    \item \textbf{Symmetry:} Is the graph undirected? (Ensures $\mathcal{L}$ is symmetric)
+    \item \textbf{Connectivity:} Is the graph connected? (Ensures $h^0 = 1$)
+    \item \textbf{Consistency Encoding:} Do the restriction maps truly capture the intended consistency relationships?
+\end{enumerate}
+
+\textbf{Test:} Create a small example (3-5 vertices) and manually verify:
+\begin{itemize}
+    \item A fully consistent global section (all constraints satisfied) should give $\mathcal{L} x = 0$
+    \item An inconsistent configuration should give $\mathcal{L} x \neq 0$
+\end{itemize}
+
+%--------------------------------------------------
+
+\subsection{Walk-Through 1: Logic Maze}
+
+\subsubsection{Problem Description}
+
+An agent navigates a 5×5 grid maze. At each cell, the agent has a belief about its orientation (one of 4 directions: North, East, South, West). The agent receives local observations (e.g., "wall on left") that constrain relative orientations between adjacent cells. A contradiction occurs if the constraints form an inconsistent cycle.
+
+\subsubsection{Step 1: Belief Graph}
+
+\begin{itemize}
+    \item \textbf{Vertices:} 25 cells in the 5×5 grid
+    \item \textbf{Edges:} Connect adjacent cells (up/down/left/right neighbors)
+    \item \textbf{Graph structure:} 2D grid graph (40 edges for a 5×5 grid)
+\end{itemize}
+
+\subsubsection{Step 2: Stalks}
+
+\textbf{Representation of Orientation:}
+
+We use $SO(2)$ (2D rotation group) to represent orientations. Each orientation is a unit vector in $\mathbb{R}^2$:
+\begin{itemize}
+    \item North: $(0, 1)$
+    \item East: $(1, 0)$
+    \item South: $(0, -1)$
+    \item West: $(-1, 0)$
+\end{itemize}
+
+\textbf{Stalk Definition:}
+\begin{equation}
+\mathcal{F}(\text{cell}) = \mathbb{R}^2
+\end{equation}
+
+Each cell's stalk holds a 2D vector representing the agent's believed orientation at that cell.
+
+\subsubsection{Step 3: Restriction Maps}
+
+\textbf{Consistency Requirement:}
+
+If the agent moves from cell $u$ to cell $v$, its orientation should transform according to the observed turn:
+\begin{itemize}
+    \item No turn: orientations should match
+    \item Left turn: orientation rotates 90° counterclockwise
+    \item Right turn: orientation rotates 90° clockwise
+\end{itemize}
+
+\textbf{Restriction Map:}
+
+For edge $e = (u, v)$ with observed turn $\theta_e$:
+\begin{equation}
+r_{e,u} = I, \quad r_{e,v} = R_{\theta_e}
+\end{equation}
+where $R_{\theta}$ is the 2D rotation matrix:
+\begin{equation}
+R_{\theta} = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}
+\end{equation}
+
+\textbf{Example:}
+\begin{itemize}
+    \item Agent at cell $u$ faces North: $x_u = (0, 1)$
+    \item Agent moves to cell $v$ with a left turn ($\theta = 90^\circ$)
+    \item Consistency: $x_u = R_{90^\circ} x_v$
+    \item If $x_v = (1, 0)$ (facing East), then $R_{90^\circ} x_v = (0, 1)$ (consistent)
+\end{itemize}
+
+\subsubsection{Step 4: Injecting a Contradiction}
+
+\textbf{Scenario:} At time $t=50$, we inject a false observation at the center cell (cell 12):
+\begin{itemize}
+    \item The agent suddenly believes it faces South instead of North
+    \item This creates a cycle of inconsistent orientations around cell 12
+\end{itemize}
+
+\textbf{Effect on Sheaf:}
+\begin{itemize}
+    \item Before injection: $h^1 = 0$ (all orientations consistent)
+    \item After injection: $h^1 = 1$ (one independent cycle of contradiction)
+    \item $\lambda_1$ decreases (frustration in the system)
+    \item $\Phi$ drops sharply (detected as anomaly)
+\end{itemize}
+
+\subsubsection{Implementation Code Snippet}
+
+\begin{verbatim}
+def construct_logic_maze_sheaf(grid_size=5):
+    # Step 1: Create grid graph
+    G = nx.grid_2d_graph(grid_size, grid_size)
+    G = nx.convert_node_labels_to_integers(G)
+    
+    # Step 2: Define stalks (SO(2) orientations)
+    stalk_dim = 2
+    stalks = {v: np.random.randn(stalk_dim) for v in G.nodes()}
+    # Normalize to unit vectors
+    for v in stalks:
+        stalks[v] /= np.linalg.norm(stalks[v])
+    
+    # Step 3: Define restriction maps (rotation matrices)
+    restriction_maps = {}
+    for edge in G.edges():
+        u, v = edge
+        # Random turn angle (or from observations)
+        theta = np.random.choice([0, np.pi/2, -np.pi/2])
+        R = np.array([[np.cos(theta), -np.sin(theta)],
+                      [np.sin(theta),  np.cos(theta)]])
+        restriction_maps[edge] = R
+    
+    # Step 4: Construct Connection Laplacian
+    L = construct_connection_laplacian(G, stalks, restriction_maps)
+    
+    return G, stalks, restriction_maps, L
+
+def inject_contradiction(stalks, center_node=12):
+    # Flip orientation at center node
+    stalks[center_node] = -stalks[center_node]
+\end{verbatim}
+
+%--------------------------------------------------
+
+\subsection{Walk-Through 2: Safety Gym (Safe RL)}
+
+\subsubsection{Problem Description}
+
+An RL agent learns to navigate a 2D environment (Safety Gym) while avoiding hazards. The agent maintains a belief graph where vertices represent states and edges represent state transitions. Each state has an associated Q-value vector (expected rewards for each action). Bellman consistency requires that Q-values satisfy the Bellman equation across transitions.
+
+\subsubsection{Step 1: Belief Graph}
+
+\textbf{Discretization:}
+\begin{itemize}
+    \item Continuous state space $(x, y) \in [0, 10] \times [0, 10]$ discretized into a 10×10 grid
+    \item \textbf{Vertices:} 100 grid cells (states)
+    \item \textbf{Edges:} Connect states reachable by one action (4-connected grid)
+\end{itemize}
+
+\textbf{Dynamic Graph:}
+\begin{itemize}
+    \item Edges are added as the agent explores and experiences transitions
+    \item Initially sparse, becomes denser with training
+\end{itemize}
+
+\subsubsection{Step 2: Stalks}
+
+\textbf{Q-Values:}
+
+Each state has Q-values for 4 actions: $\{$up, down, left, right$\}$
+
+\textbf{Stalk Definition:}
+\begin{equation}
+\mathcal{F}(\text{state}) = \mathbb{R}^4
+\end{equation}
+
+Element $i$ of the stalk represents $Q(s, a_i)$, the expected return for taking action $a_i$ in state $s$.
+
+\subsubsection{Step 3: Restriction Maps (Bellman Consistency)}
+
+\textbf{Bellman Equation:}
+
+For a transition from state $s$ to state $s'$ via action $a$ with reward $r$:
+\begin{equation}
+Q(s, a) = r + \gamma \max_{a'} Q(s', a')
+\end{equation}
+
+\textbf{Consistency Requirement:}
+
+The Q-value at $s$ for action $a$ should equal the discounted max Q-value at $s'$ plus the reward.
+
+\textbf{Restriction Map Design:}
+
+For edge $e = (s, s')$ corresponding to action $a$:
+\begin{itemize}
+    \item Edge stalk: $\mathcal{F}(e) = \mathbb{R}$ (scalar, the Q-value for that transition)
+    \item $r_{e,s}: \mathbb{R}^4 \to \mathbb{R}$: Extract $Q(s, a)$ (select component $a$)
+    \item $r_{e,s'}: \mathbb{R}^4 \to \mathbb{R}$: Compute $r + \gamma \max_{a'} Q(s', a')$
+\end{itemize}
+
+\textbf{Mathematically:}
+
+Let $e_a$ be the unit vector selecting action $a$:
+\begin{equation}
+r_{e,s}(Q_s) = e_a^T Q_s
+\end{equation}
+
+\begin{equation}
+r_{e,s'}(Q_{s'}) = r + \gamma \max(Q_{s'})
+\end{equation}
+
+\textbf{Consistency:} $r_{e,s}(Q_s) = r_{e,s'}(Q_{s'})$ means the Bellman equation is satisfied.
+
+\subsubsection{Step 4: Detecting Safety Violations}
+
+\textbf{Mechanism:}
+
+\begin{itemize}
+    \item During training, the agent updates Q-values based on experience
+    \item If the agent encounters a hazard (safety violation), it receives a large negative reward
+    \item This creates a sudden inconsistency: the Q-value for the action leading to the hazard should drop, but neighboring Q-values may not have updated yet
+    \item This inconsistency manifests as increased $h^1$ (a cycle of Bellman violations)
+    \item $\Phi$ drops, signaling danger
+\end{itemize}
+
+\textbf{Using $\Phi$ as Auxiliary Reward:}
+
+We modify the reward function:
+\begin{equation}
+r'(s, a) = r(s, a) + \alpha \cdot \Phi(s)
+\end{equation}
+where $\alpha = 0.1$ is a scaling factor.
+
+\textbf{Effect:}
+\begin{itemize}
+    \item High $\Phi$ (consistent beliefs): normal reward
+    \item Low $\Phi$ (inconsistent beliefs): penalty, discouraging risky actions
+    \item Agent learns to avoid states where its Q-value estimates are internally contradictory (often near hazards)
+\end{itemize}
+
+\subsubsection{Implementation Code Snippet}
+
+\begin{verbatim}
+def construct_safety_gym_sheaf(state_graph, q_values, gamma=0.99):
+    G = state_graph
+    stalk_dim = 4  # 4 actions
+    
+    # Step 2: Stalks are Q-value vectors
+    stalks = {s: q_values[s] for s in G.nodes()}
+    
+    # Step 3: Restriction maps (Bellman consistency)
+    restriction_maps = {}
+    for edge in G.edges():
+        s, s_prime = edge
+        action = edge_to_action(edge)  # Determine which action
+        reward = get_reward(s, action, s_prime)
+        
+        # r_{e,s}: select Q(s, action)
+        r_e_s = np.zeros((1, 4))
+        r_e_s[0, action] = 1.0
+        
+        # r_{e,s'}: compute r + gamma * max Q(s')
+        r_e_s_prime = lambda Q: reward + gamma * np.max(Q)
+        
+        # For linear Laplacian, approximate max as weighted sum
+        # (or use linearization around current Q-values)
+        
+        restriction_maps[edge] = (r_e_s, r_e_s_prime)
+    
+    L = construct_connection_laplacian(G, stalks, restriction_maps)
+    return L
+
+def compute_phronesis_reward(state, L, epsilon=1e-3):
+    Phi, h1, lambda1 = compute_phronesis_index(L, epsilon)
+    return Phi  # Higher Phi = more consistent = safer
+\end{verbatim}
+
+%--------------------------------------------------
+
+\subsection{Walk-Through 3: Multi-Robot Coordination}
+
+\subsubsection{Problem Description}
+
+Three robots explore an environment and share observations about a target's location. Each robot has its own belief about the target position $(x, y)$. Robots communicate over a network (triangle topology). A contradiction arises when Robot 1 believes the target is at $(2, 3)$, Robot 2 believes it's at $(7, 8)$, and Robot 3 has yet another belief, creating a cycle of incompatible observations.
+
+\subsubsection{Step 1: Belief Graph}
+
+\textbf{Two-Level Structure:}
+
+\begin{itemize}
+    \item \textbf{Local Level:} Each robot has its own 10×10 grid belief graph (100 vertices per robot)
+    \item \textbf{Global Level:} Robots are connected via a communication graph (3 vertices, 3 edges forming a triangle)
+\end{itemize}
+
+\textbf{Combined Graph:}
+\begin{itemize}
+    \item Total vertices: $3 \times 100 = 300$ (local states) $+ 3$ (robot nodes) $= 303$
+    \item Or, simplified: 3 robot nodes with aggregated beliefs
+\end{itemize}
+
+For our experiments, we use the simplified version:
+\begin{itemize}
+    \item \textbf{Vertices:} Robot 1, Robot 2, Robot 3
+    \item \textbf{Edges:} (R1, R2), (R2, R3), (R3, R1)
+\end{itemize}
+
+\subsubsection{Step 2: Stalks}
+
+\textbf{Target Position Belief:}
+
+Each robot's stalk represents its belief about the target's 2D position.
+
+\textbf{Stalk Definition:}
+\begin{equation}
+\mathcal{F}(\text{Robot } i) = \mathbb{R}^2
+\end{equation}
+
+Element $(x, y) \in \mathbb{R}^2$ represents the robot's belief about where the target is located.
+
+\subsubsection{Step 3: Restriction Maps (Spatial Consistency)}
+
+\textbf{Consistency Requirement:}
+
+If two robots communicate, their beliefs about the target location should be compatible (within sensor error).
+
+\textbf{Restriction Map:}
+
+For edge $e = (\text{Robot } i, \text{Robot } j)$:
+\begin{equation}
+r_{e,i} = r_{e,j} = I \quad (\text{identity})
+\end{equation}
+
+\textbf{Interpretation:} Robots should agree on the target position. Consistency means $x_i \approx x_j$.
+
+\textbf{Alternative (with coordinate transforms):}
+
+If robots use different coordinate frames:
+\begin{equation}
+r_{e,i} = I, \quad r_{e,j} = T_{ij}
+\end{equation}
+where $T_{ij}$ is the coordinate transformation from Robot $j$'s frame to Robot $i$'s frame.
+
+\subsubsection{Step 4: Injecting a Contradiction}
+
+\textbf{Scenario:}
+
+\begin{itemize}
+    \item Robot 1 observes target at $(2, 3)$ in global coordinates
+    \item Robot 2 observes target at $(7, 8)$ in global coordinates
+    \item Robot 3 observes target at $(5, 5)$ (average, but still inconsistent with both)
+\end{itemize}
+
+\textbf{Effect on Sheaf:}
+
+\begin{itemize}
+    \item The three beliefs form a triangle of disagreements
+    \item No global section exists that satisfies all pairwise consistency constraints
+    \item $h^1 = 1$ (one independent cycle of contradiction)
+    \item $\Phi$ drops significantly
+\end{itemize}
+
+\subsubsection{Step 5: Resolution via Negotiation}
+
+\textbf{Strategy:}
+
+Robots detect low $\Phi$ and initiate a negotiation protocol:
+\begin{enumerate}
+    \item Compute the average belief: $\bar{x} = \frac{1}{3}(x_1 + x_2 + x_3) = (4.67, 5.33)$
+    \item Each robot updates its belief to $\bar{x} + \text{small noise}$
+    \item Re-compute $\Phi$
+\end{enumerate}
+
+\textbf{Result:}
+\begin{itemize}
+    \item After averaging: $h^1 = 0$ (no contradiction)
+    \item $\Phi$ increases (consistency restored)
+    \item Coordination success improves
+\end{itemize}
+
+\subsubsection{Implementation Code Snippet}
+
+\begin{verbatim}
+def construct_multi_robot_sheaf(num_robots=3):
+    # Step 1: Communication graph (triangle)
+    G = nx.cycle_graph(num_robots)
+    
+    # Step 2: Stalks are 2D target position beliefs
+    stalk_dim = 2
+    stalks = {i: np.random.randn(stalk_dim) * 5 for i in G.nodes()}
+    
+    # Step 3: Restriction maps (identity for agreement)
+    restriction_maps = {}
+    for edge in G.edges():
+        restriction_maps[edge] = np.eye(stalk_dim)
+    
+    L = construct_connection_laplacian(G, stalks, restriction_maps)
+    return G, stalks, L
+
+def inject_contradiction(stalks):
+    stalks[0] = np.array([2.0, 3.0])  # Robot 1 belief
+    stalks[1] = np.array([7.0, 8.0])  # Robot 2 belief
+    stalks[2] = np.array([5.0, 5.0])  # Robot 3 belief
+
+def resolve_via_negotiation(stalks):
+    avg = np.mean([stalks[i] for i in stalks], axis=0)
+    for i in stalks:
+        stalks[i] = avg + np.random.randn(2) * 0.5  # Small noise
+\end{verbatim}
+
+%--------------------------------------------------
+
+\subsection{Summary: Decision Tree for Sheaf Construction}
+
+\begin{verbatim}
+START: What kind of multi-agent system do you have?
+
++-- Logical/Symbolic Knowledge
+|   +-- Stalks: Propositional assignments or logical states
+|   +-- Restriction: Logical consistency (e.g., not(A and not A))
+|   +-- Example: Logic Maze (orientation consistency)
+|
++-- Numerical/Continuous Beliefs
+|   +-- Stalks: Real-valued vectors (positions, Q-values, etc.)
+|   +-- Restriction: Equality or linear transformation
+|   +-- Example: Multi-Robot (spatial consistency)
+|
++-- Dynamical Systems (RL/Control)
+|   +-- Stalks: State-action values or policy parameters
+|   +-- Restriction: Bellman equation or dynamics model
+|   +-- Example: Safety Gym (Q-value consistency)
+|
++-- Hierarchical/Nested Systems
+    +-- Stalks: Multi-level representations
+    +-- Restriction: Aggregation or projection maps
+    +-- Example: Federated learning (local vs global models)
+\end{verbatim}
+
+\textbf{Key Takeaway:} The sheaf construction is domain-specific but follows a systematic process. Start with the graph structure, identify what "consistency" means in your domain, and encode it as restriction maps. Validate with small examples before scaling up.
+
+\end{document}

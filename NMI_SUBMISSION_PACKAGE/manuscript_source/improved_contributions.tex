@@ -1,0 +1,57 @@
+\subsection{Our Contributions}
+
+This paper makes the following contributions to the field of multi-agent consistency detection:
+
+\textbf{1. A Novel Scalar Index with Theoretical Guarantees:}
+
+We introduce the \textbf{Phronesis Index} ($\Phi$), the first single-number metric that quantifies global consistency in multi-agent belief networks by combining:
+\begin{itemize}
+    \item \textbf{Topological information:} The approximate first cohomology dimension ($h^1_{\epsilon}$) counts independent cycles of contradiction.
+    \item \textbf{Spectral information:} The smallest positive eigenvalue ($\lambda_1^+$) measures the system's ability to resolve local disagreements.
+\end{itemize}
+
+While Hansen \& Ghrist \cite{hansen2021opinion} introduced sheaf Laplacians for opinion dynamics, they did not define a computable health metric. Our formulation $\Phi = \lambda_1^+/(h^1_{\epsilon} + \epsilon)$ provides a practical tool with formal error bounds (Theorem~\ref{thm:error_bound}) relating spectral approximation to exact cohomology.
+
+\textbf{2. Efficient Computation via Spectral Approximation:}
+
+Computing sheaf cohomology exactly requires solving linear systems of size $O(|E| \cdot d)$ with $O(N^3)$ complexity. We show that:
+\begin{itemize}
+    \item $h^1$ can be approximated by counting near-zero eigenvalues of the Connection Laplacian.
+    \item Only the $k$ smallest eigenvalues are needed (typically $k \approx 20$).
+    \item For sparse graphs with bounded degree $d$, this achieves $O(N \log N)$ complexity (Theorem~\ref{thm:complexity}).
+\end{itemize}
+
+We validate this empirically on graphs up to 50,000 vertices, demonstrating that real-time monitoring is feasible for large-scale systems.
+
+\textbf{3. Application to Safe Reinforcement Learning:}
+
+We are the first to integrate sheaf-theoretic consistency measures into reinforcement learning. In Safety Gym benchmarks \cite{ray2019safetygym}:
+\begin{itemize}
+    \item Using $\Phi$ as an auxiliary reward signal reduces safety violations by 23\% compared to standard PPO ($p < 0.01$).
+    \item Performance is comparable to CPO \cite{achiam2017cpo}, a state-of-the-art safe RL method, but without requiring explicit cost functions.
+\end{itemize}
+
+This demonstrates that topological consistency can serve as a domain-agnostic safety signal.
+
+\textbf{4. Comprehensive Practical Guidance:}
+
+Beyond theoretical contributions, we provide:
+\begin{itemize}
+    \item A step-by-step guide for constructing cellular sheaves from domain problems (Appendix~\ref{app:sheaf_guide}).
+    \item Methods for selecting the threshold parameter $\epsilon$ based on spectral gaps or noise levels (Section~\ref{sec:epsilon_selection}).
+    \item Analysis of robustness under noisy observations (Appendix~\ref{app:robustness}).
+    \item Deployment considerations for real-time systems (Section~\ref{sec:deployment}).
+\end{itemize}
+
+This makes our method accessible to practitioners without deep background in algebraic topology.
+
+\paragraph{Scope and Limitations}
+
+It is important to clarify what this work does \textit{not} claim:
+\begin{itemize}
+    \item We do not claim that $\Phi$ solves all consistency problems or replaces domain-specific methods.
+    \item Our experiments focus on controlled scenarios; real-world deployment requires further validation.
+    \item The method assumes agents can communicate belief states; it does not address Byzantine failures or adversarial attacks (though preliminary robustness is discussed in Section~\ref{sec:limitations}).
+\end{itemize}
+
+Our goal is to introduce a new mathematical tool and demonstrate its potential across diverse applications, while being transparent about its current limitations and areas for future work.

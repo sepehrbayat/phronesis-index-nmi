@@ -1,0 +1,95 @@
+\subsubsection{Algorithmic Construction of the Connection Laplacian}
+\label{sec:laplacian_construction}
+
+We now provide a step-by-step procedure for constructing the Connection Laplacian $\mathcal{L}$ from a cellular sheaf. This makes the definition in the previous subsection fully algorithmic and reproducible.
+
+\begin{center}
+\fbox{\begin{minipage}{0.95\textwidth}
+\textbf{Algorithm: Construct Connection Laplacian}
+
+\textbf{Input:}
+\begin{itemize}
+    \item Graph $G = (V, E)$ with $N = |V|$ vertices and $M = |E|$ edges
+    \item Stalks: For each vertex $v \in V$, a vector space $\mathcal{F}(v) = \mathbb{R}^d$
+    \item Restriction maps: For each edge $e = (u, v) \in E$, linear maps $r_{e,u}: \mathbb{R}^d \to \mathbb{R}^d$ and $r_{e,v}: \mathbb{R}^d \to \mathbb{R}^d$
+\end{itemize}
+
+\textbf{Output:} Connection Laplacian $\mathcal{L} \in \mathbb{R}^{Nd \times Nd}$
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item \textbf{Initialize:} Create an $Nd \times Nd$ zero matrix $\mathcal{L}$.
+    
+    \item \textbf{Diagonal blocks:} For each vertex $v \in V$:
+    \begin{equation}
+    \mathcal{L}[v, v] = \sum_{e \ni v} r_{e,v}^T r_{e,v}
+    \end{equation}
+    where the sum is over all edges $e$ incident to $v$, and $\mathcal{L}[v, v]$ denotes the $d \times d$ block at position $(v, v)$ in the block matrix.
+    
+    \item \textbf{Off-diagonal blocks:} For each edge $e = (u, v) \in E$:
+    \begin{align}
+    \mathcal{L}[u, v] &= -r_{e,u}^T r_{e,v} \\
+    \mathcal{L}[v, u] &= -r_{e,v}^T r_{e,u}
+    \end{align}
+    These are $d \times d$ blocks at positions $(u, v)$ and $(v, u)$.
+    
+    \item \textbf{Return:} The matrix $\mathcal{L}$ is the Connection Laplacian.
+\end{enumerate}
+\end{minipage}}
+\end{center}
+
+\paragraph{Explicit Mapping: Sheaf to Matrix}
+
+The Connection Laplacian is a \textit{block matrix} where:
+\begin{itemize}
+    \item \textbf{Rows and columns:} Indexed by vertices $v \in V$, with each vertex contributing $d$ rows/columns (one per dimension of the stalk).
+    
+    \item \textbf{Diagonal blocks $\mathcal{L}[v, v]$:} A $d \times d$ matrix encoding how information at vertex $v$ is constrained by its incident edges. The sum $\sum_{e \ni v} r_{e,v}^T r_{e,v}$ accumulates contributions from all edges touching $v$.
+    
+    \item \textbf{Off-diagonal blocks $\mathcal{L}[u, v]$:} A $d \times d$ matrix encoding the consistency constraint between vertices $u$ and $v$ along edge $e = (u, v)$. The product $-r_{e,u}^T r_{e,v}$ measures how much the restriction maps "pull apart" the stalks at $u$ and $v$.
+    
+    \item \textbf{Zero blocks:} If there is no edge between $u$ and $v$, then $\mathcal{L}[u, v] = 0$ (no direct consistency constraint).
+\end{itemize}
+
+\paragraph{Concrete Example: Identity Restrictions}
+
+Suppose all restriction maps are identity matrices: $r_{e,v} = I_d$ for all $e, v$. Then:
+\begin{align}
+\mathcal{L}[v, v] &= \sum_{e \ni v} I_d^T I_d = \deg(v) \cdot I_d \\
+\mathcal{L}[u, v] &= -I_d^T I_d = -I_d \quad \text{for } (u, v) \in E
+\end{align}
+
+This is exactly the \textit{graph Laplacian} $L_G$ tensored with the identity: $\mathcal{L} = L_G \otimes I_d$, where:
+\begin{equation}
+(L_G)_{uv} = \begin{cases}
+\deg(u) & \text{if } u = v \\
+-1 & \text{if } (u, v) \in E \\
+0 & \text{otherwise}
+\end{cases}
+\end{equation}
+
+\paragraph{Concrete Example: Rotation Restrictions}
+
+In the multi-robot scenario (Sec.~\ref{sec:multi_robot}), robots have different coordinate frames. If robot $u$ is rotated by angle $\theta$ relative to robot $v$, the restriction map is a rotation matrix:
+\begin{equation}
+r_{e,u} = \begin{bmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{bmatrix}, \quad r_{e,v} = I_2
+\end{equation}
+
+Then:
+\begin{align}
+\mathcal{L}[u, u] &= r_{e,u}^T r_{e,u} = I_2 \\
+\mathcal{L}[u, v] &= -r_{e,u}^T r_{e,v} = -\begin{bmatrix} \cos\theta & \sin\theta \\ -\sin\theta & \cos\theta \end{bmatrix}
+\end{align}
+
+This encodes the constraint: "Robot $u$'s position (in its frame) should match robot $v$'s position (in $v$'s frame) after rotation by $\theta$."
+
+\paragraph{Computational Complexity}
+
+Constructing $\mathcal{L}$ requires:
+\begin{itemize}
+    \item \textbf{Diagonal blocks:} $O(Nd^2)$ operations (summing $M$ terms, each $d \times d$)
+    \item \textbf{Off-diagonal blocks:} $O(Md^2)$ operations (one $d \times d$ matrix multiply per edge)
+    \item \textbf{Total:} $O((N + M)d^2) = O(Nd^2)$ for sparse graphs ($M = O(N)$)
+\end{itemize}
+
+For typical systems with $d = 2$ or $d = 4$ (small stalk dimension), this is negligible compared to the eigenvalue computation ($O(Nd \log(Nd))$).

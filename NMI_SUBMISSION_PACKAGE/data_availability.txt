@@ -1,0 +1,8 @@
+Data Availability Statement
+
+The data that support the findings of this study are generated synthetically by the experiment scripts provided in the code repository. No external datasets are required. All code used to generate the data is available at:
+
+  https://github.com/sepehrbayat/phronesis-index-nmi
+  Release tag: v1.0-nmi-submission
+
+The data is available from the corresponding author upon reasonable request.

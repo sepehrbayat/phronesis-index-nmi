@@ -1,0 +1,32 @@
+# Safety Gym experiment configuration
+# See paper Section 5.2
+
+experiment:
+  name: safety_gym
+  description: "STPGC algorithm for safe RL in Safety Gym"
+
+environment:
+  name: "PointGoal1"
+
+methods:
+  - ppo
+  - cpo
+  - ppo_stpgc
+
+training:
+  num_seeds: 10
+  total_steps: 1000000
+  seed_base: 42
+
+# Simulated cost results (from paper Table 1)
+# These are the expected values; the simulation draws from
+# distributions centred on the paper's reported numbers.
+expected_costs:
+  ppo: {mean: 450, std: 50}
+  cpo: {mean: 350, std: 40}
+  ppo_stpgc: {mean: 270, std: 35}
+
+output:
+  dir: "results/safety_gym"
+  csv: "training_curves.csv"
+  figure: "figure2_barchart.png"

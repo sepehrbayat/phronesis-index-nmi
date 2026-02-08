@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  phronesis:
+    build: .
+    container_name: phronesis-index
+    volumes:
+      - ./results:/app/results
+    command: bash scripts/reproduce_all.sh --smoke
+
+  tests:
+    build: .
+    container_name: phronesis-tests
+    command: pytest -v --tb=short

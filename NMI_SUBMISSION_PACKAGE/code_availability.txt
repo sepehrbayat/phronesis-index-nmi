@@ -1,0 +1,14 @@
+Code Availability Statement
+
+All code used to conduct the experiments, perform the analysis, and generate the figures in this paper is available in a public GitHub repository at:
+
+  https://github.com/sepehrbayat/phronesis-index-nmi
+
+The version of the code used for this submission is tagged as v1.0-nmi-submission. The repository includes:
+
+  - Core Phronesis Index library (phronesis/)
+  - All four experiment implementations (code/)
+  - Reproduction scripts with deterministic seeds (scripts/)
+  - Environment specifications for exact dependency pinning (env/)
+  - Docker support for containerized reproduction
+  - Unit tests and CI workflow

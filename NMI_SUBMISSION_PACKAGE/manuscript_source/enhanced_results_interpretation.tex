@@ -1,0 +1,123 @@
+\subsection{Interpreting Phronesis Index Values}
+
+To aid practitioners in using $\Phi$ for their own applications, we provide guidance on interpreting its values based on our experiments.
+
+\subsubsection{General Guidelines}
+
+Across our four scenarios, we observed the following patterns:
+
+\begin{table}[h]
+\centering
+\caption{Empirical guidelines for interpreting Phronesis Index values. These are approximate ranges based on our experiments and may vary by domain.}
+\label{tab:phi_interpretation}
+\begin{tabular}{@{}llp{7cm}@{}}
+\toprule
+\textbf{$\Phi$ Range} & \textbf{Status} & \textbf{Interpretation} \\
+\midrule
+$> 50$ & Healthy & System beliefs are highly consistent. All pairwise constraints are satisfied within noise margins. Continue normal operation. \\
+$10$--$50$ & Warning & Moderate inconsistency detected. May indicate sensor drift, communication delays, or emerging contradictions. Investigate potential issues. \\
+$< 10$ & Critical & Severe inconsistency. Multiple contradiction cycles present. Halt operation and diagnose root cause immediately. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Important Caveats:}
+\begin{itemize}
+    \item These thresholds are \textit{domain-specific}. A "healthy" $\Phi$ in one application may differ from another.
+    \item The absolute value of $\Phi$ depends on system scale ($N$), stalk dimension ($d$), and noise level ($\sigma$).
+    \item For new applications, we recommend: (1) Establish a baseline $\Phi$ during known-good operation. (2) Set thresholds at 2--3 standard deviations below baseline. (3) Validate with controlled fault injection.
+\end{itemize}
+
+\subsubsection{Domain-Specific Calibration}
+
+\paragraph{Reinforcement Learning (Safety Gym):}
+In our RL experiments, we used $\Phi_{\text{crit}} = 2.0$ as a threshold for triggering episode resets. This value was chosen via cross-validation to balance:
+\begin{itemize}
+    \item \textbf{False positives:} Resetting too often disrupts learning.
+    \item \textbf{False negatives:} Missing true inconsistencies leads to safety violations.
+\end{itemize}
+
+Figure~\ref{fig:phi_vs_violations} shows the relationship between $\Phi$ and subsequent safety violations in Safety Gym. A clear inflection point occurs around $\Phi \approx 2$, justifying our threshold choice.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{figure_phi_vs_violations.png}
+\caption{Relationship between Phronesis Index and safety violations in Safety Gym. Each point represents one episode. When $\Phi < 2$ (red region), the probability of a safety violation within the next 100 steps increases sharply. This motivates our choice of $\Phi_{\text{crit}} = 2.0$ for early stopping.}
+\label{fig:phi_vs_violations}
+\end{figure}
+
+\paragraph{Multi-Robot Coordination:}
+In the multi-robot scenario, healthy operation maintained $\Phi \approx 45$--$55$. When a GPS failure was injected, $\Phi$ dropped to $\approx 5$ within 2 timesteps. This rapid detection enabled the system to:
+\begin{enumerate}
+    \item Isolate the faulty robot (by computing $\Phi$ on subgraphs).
+    \item Trigger recalibration protocols.
+    \item Resume normal operation once $\Phi$ recovered to $> 40$.
+\end{enumerate}
+
+\paragraph{Scalability Tests:}
+For large synthetic graphs ($N = 1000$--$50000$), we observed that $\Phi$ scales roughly as $\Phi \propto \sqrt{N}$ for random geometric graphs with fixed density. This suggests that thresholds should be adjusted for system size. A normalized index $\Phi_{\text{norm}} = \Phi / \sqrt{N}$ may provide scale-invariant interpretation, though this requires further investigation.
+
+\subsubsection{Diagnostic Use of $h^1_{\epsilon}$ and $\lambda_1^+$}
+
+While $\Phi$ provides a single summary statistic, examining its components can aid diagnosis:
+
+\begin{itemize}
+    \item \textbf{High $h^1_{\epsilon}$, low $\lambda_1^+$:} Many contradictions \textit{and} weak consensus dynamics. This is the worst-case scenario, indicating fundamental structural problems (e.g., network partition, multiple sensor failures).
+    
+    \item \textbf{High $h^1_{\epsilon}$, moderate $\lambda_1^+$:} Contradictions exist but the system has some ability to resolve them via information diffusion. May indicate transient issues (e.g., communication delays) that will self-correct.
+    
+    \item \textbf{Low $h^1_{\epsilon}$, low $\lambda_1^+$:} Few contradictions but weak dynamics. System is consistent but fragile—small perturbations could cause large changes. Consider improving connectivity or increasing communication bandwidth.
+    
+    \item \textbf{Low $h^1_{\epsilon}$, high $\lambda_1^+$:} Ideal state. System is both consistent and robust.
+\end{itemize}
+
+\subsubsection{Temporal Patterns}
+
+In dynamic systems, the \textit{trajectory} of $\Phi$ over time provides additional information:
+
+\begin{itemize}
+    \item \textbf{Sudden drop:} Indicates an acute event (sensor failure, adversarial attack, environment change). Requires immediate investigation.
+    
+    \item \textbf{Gradual decline:} Suggests slow degradation (sensor drift, battery depletion, model mismatch accumulation). Schedule maintenance or recalibration.
+    
+    \item \textbf{Oscillations:} May indicate intermittent faults (e.g., wireless interference) or limit cycles in the system dynamics. Consider filtering or increasing $\epsilon$.
+    
+    \item \textbf{Recovery after intervention:} Validates that corrective action (e.g., sensor reset, agent removal) was effective.
+\end{itemize}
+
+Figure~\ref{fig:phi_timeseries_patterns} illustrates these patterns using data from our experiments.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\textwidth]{figure_phi_timeseries_patterns.png}
+\caption{Temporal patterns of Phronesis Index in different scenarios. \textbf{(a)} Sudden drop in Logic Maze when contradiction is injected at $t=50$. \textbf{(b)} Gradual decline in multi-robot scenario due to GPS drift. \textbf{(c)} Oscillations in Safety Gym due to exploration-exploitation tradeoffs. \textbf{(d)} Recovery after recalibration at $t=80$ in multi-robot scenario.}
+\label{fig:phi_timeseries_patterns}
+\end{figure}
+
+\subsubsection{Comparison with Baseline Methods}
+
+To contextualize $\Phi$'s performance, we compare it with two simpler consistency metrics:
+
+\begin{enumerate}
+    \item \textbf{Pairwise disagreement:} Average $\ell_2$ distance between adjacent agents' beliefs.
+    \item \textbf{Variance:} Global variance of all agents' beliefs.
+\end{enumerate}
+
+Table~\ref{tab:metric_comparison} shows that $\Phi$ detects global contradictions that these baselines miss.
+
+\begin{table}[h]
+\centering
+\caption{Comparison of consistency metrics on the height contradiction example (Section~\ref{sec:quant_example}). Only $\Phi$ correctly identifies the global contradiction.}
+\label{tab:metric_comparison}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Metric} & \textbf{Consistent Case} & \textbf{Contradictory Case} & \textbf{Detects Contradiction?} \\
+\midrule
+Pairwise disagreement & 0.05 & 0.05 & ❌ No \\
+Global variance & 0.12 & 0.13 & ❌ No (marginal) \\
+Phronesis Index ($\Phi$) & 48.2 & 2.1 & ✅ Yes (clear) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This demonstrates the value of our topological approach: pairwise and variance-based methods are sensitive only to \textit{local} inconsistencies, whereas $\Phi$ captures \textit{global} structural contradictions.

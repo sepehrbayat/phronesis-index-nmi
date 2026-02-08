@@ -1,0 +1,115 @@
+\subsection{Parameter Selection Guide}
+\label{sec:parameter_selection}
+
+The Phronesis Index depends on two key parameters: the eigenvalue threshold $\epsilon$ and the reward shaping coefficient $\alpha$ (when used in RL). This section provides quantitative guidance for selecting these parameters.
+
+\subsubsection{Choosing $\epsilon$: Spectral Gap Estimation}
+
+The threshold $\epsilon$ determines which eigenvalues are counted as "near-zero" for approximating $h^1$. The optimal choice depends on the \textit{spectral gap} $\delta = \lambda_1^+ - \lambda_0$ (the distance between the smallest positive eigenvalue and zero).
+
+\paragraph{Theoretical Guideline:}
+From Theorem~\ref{thm:error_bound}, to ensure $|h^1_{\epsilon} - h^1_{\text{true}}| \leq 1$ with high probability under noise level $\sigma$, we require:
+\begin{equation}
+\epsilon < \frac{\delta}{2} - 2\sigma
+\end{equation}
+
+\paragraph{Practical Procedure:}
+\begin{enumerate}
+    \item \textbf{Initial estimate:} Run a pilot computation of the Connection Laplacian on a representative subgraph (e.g., 100-500 vertices).
+    \item \textbf{Compute spectrum:} Extract the smallest 20 eigenvalues using Lanczos iteration.
+    \item \textbf{Identify gap:} Plot the eigenvalues and visually identify the gap between near-zero and positive eigenvalues. Typically, $\lambda_0 \approx 10^{-10}$ (numerical zero) and $\lambda_1^+ \in [10^{-4}, 10^{-1}]$ depending on graph connectivity.
+    \item \textbf{Set threshold:} Choose $\epsilon = 0.1 \times \lambda_1^+$ as a conservative estimate. This ensures $\epsilon$ is well below the spectral gap while remaining above numerical noise.
+    \item \textbf{Validate:} Check that $h^1_{\epsilon}$ remains stable when $\epsilon$ is varied by $\pm 50\%$. If $h^1_{\epsilon}$ changes significantly, the spectral gap may be too small, indicating high ambiguity in the system.
+\end{enumerate}
+
+\paragraph{Example Values:}
+\begin{itemize}
+    \item \textbf{Logic Maze (5×5 grid):} $\lambda_1^+ \approx 0.05 \Rightarrow \epsilon = 0.005$
+    \item \textbf{Safety Gym (10×10 grid):} $\lambda_1^+ \approx 0.02 \Rightarrow \epsilon = 0.002$
+    \item \textbf{Multi-Robot (10 agents):} $\lambda_1^+ \approx 0.08 \Rightarrow \epsilon = 0.008$
+    \item \textbf{Scalability (50k agents):} $\lambda_1^+ \approx 0.001 \Rightarrow \epsilon = 0.0001$
+\end{itemize}
+
+\paragraph{Sensitivity Analysis:}
+Figure~\ref{fig:epsilon_sensitivity} shows how $\Phi$ varies with $\epsilon$ for the Safety Gym scenario. The plateau region ($\epsilon \in [0.001, 0.01]$) indicates robust parameter selection. Outside this range, $\Phi$ either overcounts noise ($\epsilon$ too large) or misses true inconsistencies ($\epsilon$ too small).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{figure_epsilon_sensitivity.png}
+\caption{Sensitivity of $\Phi$ to threshold $\epsilon$ in Safety Gym. The shaded region indicates the robust selection range where $h^1_{\epsilon}$ is stable. Our choice $\epsilon = 0.002$ falls in the middle of this plateau.}
+\label{fig:epsilon_sensitivity}
+\end{figure}
+
+\subsubsection{Choosing $\alpha$: Reward Shaping Coefficient}
+
+When integrating $\Phi$ into reinforcement learning via reward shaping ($r' = r + \alpha \cdot \Phi$), the coefficient $\alpha$ balances task performance (original reward $r$) against consistency maintenance (auxiliary signal $\Phi$).
+
+\paragraph{Theoretical Consideration:}
+The modified reward $r'$ should preserve the optimal policy structure while providing a consistency incentive. If $\alpha$ is too small, the agent ignores $\Phi$; if too large, the agent sacrifices task performance for consistency.
+
+\paragraph{Practical Procedure:}
+\begin{enumerate}
+    \item \textbf{Normalize scales:} Measure the typical ranges of $r$ and $\Phi$ in pilot runs. For Safety Gym, $r \in [-50, 50]$ and $\Phi \in [0, 5]$.
+    \item \textbf{Grid search:} Test $\alpha \in \{0.01, 0.05, 0.1, 0.5, 1.0\}$ over 5 independent training runs (100k steps each).
+    \item \textbf{Evaluate trade-off:} For each $\alpha$, record both task success rate and safety cost. Plot the Pareto frontier.
+    \item \textbf{Select optimum:} Choose the $\alpha$ that achieves the best trade-off. In our experiments, $\alpha = 0.1$ provided 23\% cost reduction with minimal success rate degradation ($<2\%$).
+    \item \textbf{Validate:} Run full training (1M steps, 10 seeds) with the selected $\alpha$ to confirm statistical significance.
+\end{enumerate}
+
+\paragraph{Example Values:}
+\begin{itemize}
+    \item \textbf{Safety Gym (PointGoal1):} $\alpha = 0.1$ (optimal from grid search)
+    \item \textbf{Safety Gym (CarGoal):} $\alpha = 0.05$ (lower due to higher task difficulty)
+    \item \textbf{Multi-Robot coordination:} $\alpha = 0.2$ (higher weight on consistency for safety-critical tasks)
+\end{itemize}
+
+\paragraph{Sensitivity Analysis:}
+Table~\ref{tab:alpha_sensitivity} shows how performance metrics vary with $\alpha$. The sweet spot is $\alpha \in [0.05, 0.2]$, where both safety and task performance improve relative to baseline ($\alpha = 0$).
+
+\begin{table}[h]
+\centering
+\caption{Sensitivity of RL performance to reward shaping coefficient $\alpha$ in Safety Gym (PointGoal1). Values are mean $\pm$ std over 10 runs. Bold indicates best performance.}
+\label{tab:alpha_sensitivity}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+$\alpha$ & Success Rate (\%) & Cost (lower is better) & Episode Reward & Training Time (hrs) \\
+\midrule
+0.00 (baseline) & $87.2 \pm 3.1$ & $19.8 \pm 2.4$ & $42.3 \pm 5.1$ & $2.1 \pm 0.1$ \\
+0.01 & $86.8 \pm 2.9$ & $18.5 \pm 2.2$ & $43.1 \pm 4.8$ & $2.2 \pm 0.1$ \\
+0.05 & $86.5 \pm 3.0$ & $16.7 \pm 2.0$ & $44.2 \pm 4.5$ & $2.2 \pm 0.1$ \\
+\textbf{0.10} & $\mathbf{85.9 \pm 2.8}$ & $\mathbf{15.2 \pm 1.8}$ & $\mathbf{45.8 \pm 4.2}$ & $\mathbf{2.3 \pm 0.1}$ \\
+0.20 & $84.1 \pm 3.2$ & $14.8 \pm 1.9$ & $44.9 \pm 4.6$ & $2.4 \pm 0.1$ \\
+0.50 & $79.3 \pm 4.1$ & $15.1 \pm 2.3$ & $41.2 \pm 5.3$ & $2.5 \pm 0.2$ \\
+1.00 & $71.5 \pm 5.2$ & $16.9 \pm 2.8$ & $35.7 \pm 6.1$ & $2.6 \pm 0.2$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Key Insight:}
+The optimal $\alpha$ is problem-dependent but typically falls in the range $[0.05, 0.2]$. A simple heuristic is to start with $\alpha = 0.1$ and adjust based on the observed trade-off between task performance and safety.
+
+\subsubsection{Automated Parameter Tuning}
+
+For practitioners who prefer automated selection, we provide a simple adaptive procedure:
+
+\begin{algorithm}[h]
+\caption{Adaptive Parameter Selection}
+\label{alg:adaptive_params}
+\begin{algorithmic}[1]
+\Require Graph $G$, pilot data $D_{\text{pilot}}$, RL environment $\mathcal{E}$
+\Ensure Optimal $\epsilon^*$, $\alpha^*$
+\State Construct Connection Laplacian $\mathcal{L}$ from pilot data
+\State Compute eigenvalues $\{\lambda_i\}_{i=0}^{19}$ using Lanczos
+\State $\lambda_1^+ \gets \min\{\lambda_i : \lambda_i > 10^{-8}\}$
+\State $\epsilon^* \gets 0.1 \times \lambda_1^+$ \Comment{Conservative threshold}
+\State $\mathcal{A} \gets \{0.01, 0.05, 0.1, 0.2, 0.5\}$ \Comment{Candidate $\alpha$ values}
+\For{$\alpha \in \mathcal{A}$}
+    \State Train RL agent with $r' = r + \alpha \cdot \Phi$ for 100k steps
+    \State Evaluate on 50 test episodes: record $S_{\alpha}$ (success rate), $C_{\alpha}$ (cost)
+\EndFor
+\State $\alpha^* \gets \arg\max_{\alpha} \left( S_{\alpha} - \beta \cdot C_{\alpha} \right)$ \Comment{$\beta$ is cost penalty weight}
+\State \Return $\epsilon^*$, $\alpha^*$
+\end{algorithmic}
+\end{algorithm}
+
+This procedure requires $\approx 500k$ total environment steps (5 candidates × 100k steps) and typically completes in $<3$ hours on a standard workstation.

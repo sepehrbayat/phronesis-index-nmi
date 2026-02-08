@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Bayat"
+    given-names: "Sepehr"
+    email: "sepehrbayat@hooshex.com"
+    affiliation: "Hooshex AI Lab"
+title: "Spectral Sheaf Heuristics for Consistency Detection in Multi-Agent Systems"
+version: 1.0.0
+date-released: 2026-02-08
+url: "https://github.com/sepehrbayat/phronesis-index-nmi"
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Bayat"
+      given-names: "Sepehr"
+  title: "Spectral Sheaf Heuristics for Consistency Detection in Multi-Agent Systems"
+  journal: "Nature Machine Intelligence"
+  year: 2026
+  status: "submitted"

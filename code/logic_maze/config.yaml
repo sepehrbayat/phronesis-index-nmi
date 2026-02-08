@@ -1,0 +1,30 @@
+# Logic Maze experiment configuration
+# See paper Section 5.1
+
+experiment:
+  name: logic_maze
+  description: "Anomaly detection in a grid-based multi-agent Logic Maze"
+
+grid:
+  size: 5              # 5×5 grid → 25 agents
+  stalk_dim: 2         # 2D orientation vectors
+
+anomaly:
+  injection_time: 50   # timestep when anomaly begins
+  duration: 50          # anomaly lasts 50 timesteps
+  fraction: 0.10        # 10% of edges are perturbed
+  strength: 0.5         # perturbation magnitude
+
+simulation:
+  num_timesteps: 150
+  num_runs: 10          # independent runs for statistics
+  seed_base: 42         # seeds are seed_base + run_index
+
+phronesis:
+  epsilon: 0.01
+  k: 20                 # number of smallest eigenvalues
+
+output:
+  dir: "results/logic_maze"
+  csv: "phi_timeseries.csv"
+  figure: "figure1_timeseries.png"
