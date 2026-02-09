@@ -111,42 +111,17 @@ Using first-order Taylor expansion:
 
 \textbf{Key Insight:} The error in $\Phi$ is linear in noise level $\sigma$ and inversely proportional to spectral gap $\delta$. Systems with good spectral properties are naturally robust.
 
-\subsubsection{Empirical Sensitivity Study}
+\subsubsection{Illustrative Sensitivity Example}
 
-We conducted experiments to validate the theoretical bounds.
-
-\textbf{Setup:}
+To illustrate the theoretical bounds, consider the Logic Maze scenario (5$\times$5 grid, 25 vertices) with spectral gap $\delta \approx 0.5$ and $\lambda_1 \approx 1.5$:
 \begin{itemize}
-    \item Logic Maze scenario (5×5 grid, 25 vertices)
-    \item Inject Gaussian noise into stalks: $\tilde{x}_v = x_v + \eta_v$, $\eta_v \sim \mathcal{N}(0, \sigma^2 I)$
-    \item Vary $\sigma \in \{0.01, 0.05, 0.1, 0.2, 0.5\}$
-    \item Measure $|\Phi(\tilde{\mathcal{L}}) - \Phi(\mathcal{L}_0)|$
+    \item For noise $\sigma = 0.01$: the bound gives $|\Delta \lambda_1| \leq 0.01$, so $\Phi$ changes by $< 1\%$. The condition $\sigma < \delta/4 = 0.125$ is easily satisfied.
+    \item For noise $\sigma = 0.1$: the bound gives $|\Delta \lambda_1| \leq 0.1$, and $\lceil 2\sigma/\delta \rceil = 1$, so at most one eigenvalue may be misclassified.  $\Phi$ is still within the graceful-degradation regime.
+    \item For noise $\sigma = 0.5$: now $\sigma = \delta$, violating the condition $\sigma < \delta/4$.  The eigenvalue perturbation can create spurious near-zero modes, inflating $h^1$ and collapsing $\Phi$.
 \end{itemize}
 
-\textbf{Results:}
-
-\begin{table}[h]
-\centering
-\begin{tabular}{ccccc}
-\toprule
-$\sigma$ & $\lambda_1$ (mean) & $h^1$ (mean) & $\Phi$ (mean) & $|\Delta \Phi|$ \\
-\midrule
-0.00 & 1.50 & 0 & 1500.0 & 0.0 \\
-0.01 & 1.49 & 0 & 1490.0 & 10.0 \\
-0.05 & 1.45 & 0 & 1450.0 & 50.0 \\
-0.10 & 1.40 & 0 & 1400.0 & 100.0 \\
-0.20 & 1.30 & 1 & 0.65 & \textbf{large} \\
-0.50 & 1.10 & 2 & 0.37 & \textbf{large} \\
-\bottomrule
-\end{tabular}
-\caption{Sensitivity of $\Phi$ to noise level $\sigma$. For $\sigma < 0.1$, $\Phi$ remains stable. At $\sigma \geq 0.2$, noise induces false $h^1 > 0$, causing $\Phi$ to drop dramatically.}
-\end{table}
-
-\textbf{Interpretation:}
-\begin{itemize}
-    \item \textbf{Low noise ($\sigma < 0.1$):} $\Phi$ degrades gracefully, maintaining relative order (high $\Phi$ systems remain high).
-    \item \textbf{High noise ($\sigma \geq 0.2$):} Noise creates spurious near-zero eigenvalues, inflating $h^1$ and collapsing $\Phi$. This is a \textit{phase transition} where the signal is overwhelmed.
-\end{itemize}
+\textbf{Key takeaway:}
+For well-separated spectra ($\delta \gg \sigma$), $\Phi$ is robust.  When $\sigma$ approaches $\delta$, a phase transition occurs where noise-induced eigenvalues cross the $\epsilon$ threshold, making $h^1$ estimation unreliable.  Running a controlled noise-injection study on our grid-world experiments is left to future work.
 
 \textbf{Practical Guideline:} Ensure $\sigma < \delta/2$ through preprocessing (filtering, averaging, outlier removal).
 
@@ -331,74 +306,33 @@ with probability $\geq 1 - \exp(-N/2)$ (for Gaussian noise).
 
 \subsection{Experimental Validation of Robustness}
 
-\subsubsection{Experiment: Noisy Safety Gym}
+\subsubsection{Theoretical Noise Tolerance of the Grid-World Experiment}
 
-\textbf{Setup:}
+The theoretical bounds derived above allow us to predict the robustness of $\Phi$ in our grid-world Bellman consistency experiment (Section~\ref{sec:safety_gym}) without running a separate noise-injection study. In the $8\times 8$ grid MDP:
 \begin{itemize}
-    \item Safety Gym environment (PointGoal1)
-    \item Add Gaussian noise to Q-value estimates: $\tilde{Q}(s,a) = Q(s,a) + \mathcal{N}(0, \sigma^2)$
-    \item Vary $\sigma \in \{0.0, 0.1, 0.2, 0.5\}$
-    \item Train PPO+STPGC with noisy $\Phi$
-    \item Measure: Cost (safety violations), Success Rate
+    \item The spectral gap of the Connection Laplacian is $\delta \approx 0.05$--$0.15$ (observed across 10 seeds).
+    \item Applying the condition $\sigma < \delta/4$ gives a noise tolerance of roughly $\sigma < 0.01$--$0.04$.
+    \item At typical Q-learning estimation noise ($\sigma \approx 0.01$ per stalk entry during late training), the eigenvalue perturbation bound predicts $|\Delta \lambda_1| \leq 0.01$, which is small relative to $\lambda_1 \approx 0.3$.
 \end{itemize}
 
-\textbf{Results:}
+\textbf{Prediction:}
+Based on the bounded-degradation theorem above, we expect $\Phi$ to remain within a factor of 2 of its noise-free value for our grid-world experiments, because the Q-learning estimation noise satisfies $\sigma < \delta/4$ once training has partially converged.  Validating this prediction under controlled noise injection (varying $\sigma$ explicitly) is left to future work.
 
-\begin{table}[h]
-\centering
-\begin{tabular}{cccc}
-\toprule
-Noise $\sigma$ & Cost (mean $\pm$ std) & Success Rate & $\Phi$ Correlation \\
-\midrule
-0.0 & $15.2 \pm 2.1$ & 0.89 & 1.00 \\
-0.1 & $16.8 \pm 2.5$ & 0.85 & 0.92 \\
-0.2 & $19.3 \pm 3.2$ & 0.78 & 0.81 \\
-0.5 & $28.7 \pm 5.1$ & 0.62 & 0.54 \\
-\bottomrule
-\end{tabular}
-\caption{Robustness to Q-value noise. $\Phi$ Correlation measures Pearson correlation between noisy $\Phi$ and true $\Phi$. Performance degrades gracefully up to $\sigma = 0.2$, then drops sharply at $\sigma = 0.5$.}
-\end{table}
+\textbf{Practical implication:} Practitioners should verify that their measurement noise satisfies $\sigma < \delta/4$ for their specific graph structure before relying on $\Phi$ as a safety signal.  If this condition is not met, the noise-filtering techniques described below should be applied first.
 
-\textbf{Interpretation:}
+\subsubsection{Expected Benefit of Adaptive $\epsilon$ Selection}
+
+\textbf{Intuition:}
+The three strategies differ in how they handle noise:
 \begin{itemize}
-    \item \textbf{Moderate noise ($\sigma \leq 0.2$):} $\Phi$ remains correlated with true consistency, and STPGC still provides safety benefits (cost increase $< 30\%$).
-    \item \textbf{High noise ($\sigma = 0.5$):} $\Phi$ signal is degraded ($r = 0.54$), and safety performance suffers significantly.
+    \item \textbf{Fixed $\epsilon = 10^{-3}$:} Works well when noise is negligible ($\sigma \ll 10^{-3}$) but misclassifies eigenvalues when noise grows.
+    \item \textbf{Gap-based $\epsilon = \delta_{\max}/2$:} Adapts to spectrum structure; robust when the spectral gap is clearly identifiable.
+    \item \textbf{Adaptive $\epsilon = 2\hat{\sigma}$:} Tracks the noise level directly; should degrade gracefully as noise increases.
 \end{itemize}
 
-\textbf{Conclusion:} The method is robust to realistic noise levels (typical Q-value estimation errors are $\sigma \approx 0.1$–$0.2$ in RL).
+The theoretical analysis predicts that adaptive methods will dominate fixed thresholds at moderate-to-high noise, because fixed $\epsilon$ either under- or over-counts eigenvalues as the noise floor shifts.  We use the gap-based strategy (Section~\ref{sec:epsilon_procedure}) in all our experiments and recommend it as the default for practitioners.  A rigorous empirical comparison of these three strategies across multiple noise regimes is left to future work.
 
-\subsubsection{Experiment: Adaptive $\epsilon$ Selection}
-
-\textbf{Setup:}
-\begin{itemize}
-    \item Logic Maze with varying noise levels
-    \item Compare three $\epsilon$ strategies:
-    \begin{itemize}
-        \item Fixed: $\epsilon = 10^{-3}$
-        \item Gap-based: $\epsilon = \delta_{\max}/2$
-        \item Adaptive: $\epsilon = 2\hat{\sigma}$
-    \end{itemize}
-    \item Measure: Accuracy of $h^1$ estimation (compared to ground truth via direct computation)
-\end{itemize}
-
-\textbf{Results:}
-
-\begin{table}[h]
-\centering
-\begin{tabular}{cccc}
-\toprule
-Noise $\sigma$ & Fixed $\epsilon$ & Gap-based & Adaptive \\
-\midrule
-0.01 & 95\% & 98\% & 97\% \\
-0.05 & 87\% & 94\% & 96\% \\
-0.10 & 72\% & 89\% & 93\% \\
-0.20 & 51\% & 78\% & 85\% \\
-\bottomrule
-\end{tabular}
-\caption{Accuracy of $h^1$ estimation under different $\epsilon$ strategies. Adaptive $\epsilon$ consistently outperforms fixed thresholds, especially at higher noise levels.}
-\end{table}
-
-\textbf{Conclusion:} Adaptive threshold selection significantly improves robustness. We recommend using the gap-based or adaptive strategy in practice.
+\textbf{Recommendation:} We recommend using the gap-based or adaptive strategy in practice.
 
 %--------------------------------------------------
 

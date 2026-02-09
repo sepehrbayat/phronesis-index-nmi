@@ -60,7 +60,7 @@ Our experiments cover four scenarios, but many application domains remain untest
 
 \paragraph{6. Comparison to Simple Baselines}
 
-While we compared PPO+STPGC to CPO (a sophisticated safe RL method), we did not compare to simpler consistency checks:
+While we compared Q-learning+STPGC to a cost-penalty baseline (analogous to constrained RL), we did not compare to simpler consistency checks:
 \begin{itemize}
     \item \textbf{Pairwise Bellman error:} Count the fraction of edges where $|Q(s, a) - (r + \gamma \max_{a'} Q(s', a'))| > \tau$. This is a local check that does not detect global cycles of inconsistency.
     \item \textbf{Variance-based heuristics:} Measure the variance of Q-values across states as a proxy for inconsistency.

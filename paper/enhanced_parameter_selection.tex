@@ -49,41 +49,21 @@ The modified reward $r'$ should preserve the optimal policy structure while prov
 
 \paragraph{Practical Procedure:}
 \begin{enumerate}
-    \item \textbf{Normalize scales:} Measure the typical ranges of $r$ and $\Phi$ in pilot runs. For Safety Gym, $r \in [-50, 50]$ and $\Phi \in [0, 5]$.
-    \item \textbf{Grid search:} Test $\alpha \in \{0.01, 0.05, 0.1, 0.5, 1.0\}$ over 5 independent training runs (100k steps each).
+    \item \textbf{Normalize scales:} Measure the typical ranges of $r$ and $\Phi$ in pilot runs. In our grid-world MDP, $r \in [-1, 10]$ and $\Phi \in [0, 5]$.
+    \item \textbf{Grid search:} Test $\alpha \in \{0.01, 0.05, 0.1, 0.5, 1.0\}$ over 5 independent training runs.
     \item \textbf{Evaluate trade-off:} For each $\alpha$, record both task success rate and safety cost. Plot the Pareto frontier.
-    \item \textbf{Select optimum:} Choose the $\alpha$ that achieves the best trade-off. In our experiments, $\alpha = 0.1$ provided 23\% cost reduction with minimal success rate degradation ($<2\%$).
-    \item \textbf{Validate:} Run full training (1M steps, 10 seeds) with the selected $\alpha$ to confirm statistical significance.
+    \item \textbf{Select optimum:} Choose the $\alpha$ that achieves the best trade-off. In our grid-world experiments, $\alpha = 0.1$ provided a reasonable cost reduction with minimal success rate degradation.
+    \item \textbf{Validate:} Run full training (500 episodes, 10 seeds) with the selected $\alpha$ to confirm statistical significance.
 \end{enumerate}
 
 \paragraph{Example Values:}
 \begin{itemize}
-    \item \textbf{Safety Gym (PointGoal1):} $\alpha = 0.1$ (optimal from grid search)
-    \item \textbf{Safety Gym (CarGoal):} $\alpha = 0.05$ (lower due to higher task difficulty)
+    \item \textbf{Grid-world MDP ($8\times 8$):} $\alpha = 0.1$ (selected via pilot runs; see Section~\ref{sec:safety_gym})
     \item \textbf{Multi-Robot coordination:} $\alpha = 0.2$ (higher weight on consistency for safety-critical tasks)
 \end{itemize}
 
 \paragraph{Sensitivity Analysis:}
-Table~\ref{tab:alpha_sensitivity} shows how performance metrics vary with $\alpha$. The sweet spot is $\alpha \in [0.05, 0.2]$, where both safety and task performance improve relative to baseline ($\alpha = 0$).
-
-\begin{table}[h]
-\centering
-\caption{Sensitivity of RL performance to reward shaping coefficient $\alpha$ in Safety Gym (PointGoal1). Values are mean $\pm$ std over 10 runs. Bold indicates best performance.}
-\label{tab:alpha_sensitivity}
-\begin{tabular}{@{}lcccc@{}}
-\toprule
-$\alpha$ & Success Rate (\%) & Cost (lower is better) & Episode Reward & Training Time (hrs) \\
-\midrule
-0.00 (baseline) & $87.2 \pm 3.1$ & $19.8 \pm 2.4$ & $42.3 \pm 5.1$ & $2.1 \pm 0.1$ \\
-0.01 & $86.8 \pm 2.9$ & $18.5 \pm 2.2$ & $43.1 \pm 4.8$ & $2.2 \pm 0.1$ \\
-0.05 & $86.5 \pm 3.0$ & $16.7 \pm 2.0$ & $44.2 \pm 4.5$ & $2.2 \pm 0.1$ \\
-\textbf{0.10} & $\mathbf{85.9 \pm 2.8}$ & $\mathbf{15.2 \pm 1.8}$ & $\mathbf{45.8 \pm 4.2}$ & $\mathbf{2.3 \pm 0.1}$ \\
-0.20 & $84.1 \pm 3.2$ & $14.8 \pm 1.9$ & $44.9 \pm 4.6$ & $2.4 \pm 0.1$ \\
-0.50 & $79.3 \pm 4.1$ & $15.1 \pm 2.3$ & $41.2 \pm 5.3$ & $2.5 \pm 0.2$ \\
-1.00 & $71.5 \pm 5.2$ & $16.9 \pm 2.8$ & $35.7 \pm 6.1$ & $2.6 \pm 0.2$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+The optimal $\alpha$ is problem-dependent.  In our grid-world experiment, $\alpha \in [0.05, 0.2]$ consistently outperformed the baseline (no reward shaping, $\alpha = 0$).  Extreme values ($\alpha \geq 1.0$) caused the agent to ignore the environment reward; very small values ($\alpha \leq 0.01$) had negligible effect.  Because our grid-world MDP is intentionally simple, we do not present a detailed sensitivity table; extending the $\alpha$-sweep to richer environments (e.g., continuous-control Safety Gym tasks) is future work.
 
 \paragraph{Key Insight:}
 The optimal $\alpha$ is problem-dependent but typically falls in the range $[0.05, 0.2]$. A simple heuristic is to start with $\alpha = 0.1$ and adjust based on the observed trade-off between task performance and safety.
@@ -95,7 +75,7 @@ For practitioners who prefer automated selection, we provide a simple adaptive p
 \begin{algorithm}[h]
 \caption{Adaptive Parameter Selection}
 \label{alg:adaptive_params}
-\begin{algorithmic}[1]
+\begin{algorithmic}
 \Require Graph $G$, pilot data $D_{\text{pilot}}$, RL environment $\mathcal{E}$
 \Ensure Optimal $\epsilon^*$, $\alpha^*$
 \State Construct Connection Laplacian $\mathcal{L}$ from pilot data

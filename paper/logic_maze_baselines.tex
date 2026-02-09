@@ -53,6 +53,7 @@ Table~\ref{tab:logic_maze_comparison} summarizes the performance of all methods 
 \centering
 \caption{Comparison of anomaly detection methods in Logic Maze. Values are mean $\pm$ std over 10 runs. Bold indicates best performance.}
 \label{tab:logic_maze_comparison}
+\resizebox{\textwidth}{!}{%
 \begin{tabular}{@{}lcccc@{}}
 \toprule
 Method & Detection Latency (steps) & False Positive Rate (\%) & Computational Cost (ms) & Success Rate (\%) \\
@@ -62,7 +63,7 @@ SAT Solver (MiniSAT) & $1.2 \pm 0.4$ & $0.0 \pm 0.0$ & $45.3 \pm 12.7$ & $100.0$
 Cycle Detection (DFS) & $3.5 \pm 1.1$ & $2.1 \pm 1.3$ & $2.1 \pm 0.3$ & $90.0$ \\
 \textbf{Phronesis Index ($\Phi$)} & $\mathbf{1.8 \pm 0.5}$ & $\mathbf{0.5 \pm 0.7}$ & $3.2 \pm 0.4$ & $\mathbf{100.0}$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}}% end resizebox
 \end{table}
 
 \paragraph{Key Findings:}
