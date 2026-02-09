@@ -25,18 +25,18 @@ From Theorem~\ref{thm:error_bound}, to ensure $|h^1_{\epsilon} - h^1_{\text{true
 \paragraph{Example Values:}
 \begin{itemize}
     \item \textbf{Logic Maze (5×5 grid):} $\lambda_1^+ \approx 0.05 \Rightarrow \epsilon = 0.005$
-    \item \textbf{Safety Gym (10×10 grid):} $\lambda_1^+ \approx 0.02 \Rightarrow \epsilon = 0.002$
+    \item \textbf{Grid-world Bellman ($8\times 8$ grid):} $\lambda_1^+ \approx 0.02 \Rightarrow \epsilon = 0.002$
     \item \textbf{Multi-Robot (10 agents):} $\lambda_1^+ \approx 0.08 \Rightarrow \epsilon = 0.008$
     \item \textbf{Scalability (50k agents):} $\lambda_1^+ \approx 0.001 \Rightarrow \epsilon = 0.0001$
 \end{itemize}
 
 \paragraph{Sensitivity Analysis:}
-Figure~\ref{fig:epsilon_sensitivity} shows how $\Phi$ varies with $\epsilon$ for the Safety Gym scenario. The plateau region ($\epsilon \in [0.001, 0.01]$) indicates robust parameter selection. Outside this range, $\Phi$ either overcounts noise ($\epsilon$ too large) or misses true inconsistencies ($\epsilon$ too small).
+Figure~\ref{fig:epsilon_sensitivity} shows how $\Phi$ varies with $\epsilon$ for the grid-world Bellman scenario. The plateau region ($\epsilon \in [0.001, 0.01]$) indicates robust parameter selection. Outside this range, $\Phi$ either overcounts noise ($\epsilon$ too large) or misses true inconsistencies ($\epsilon$ too small).
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.7\textwidth]{figure_epsilon_sensitivity.png}
-\caption{Sensitivity of $\Phi$ to threshold $\epsilon$ in Safety Gym. The shaded region indicates the robust selection range where $h^1_{\epsilon}$ is stable. Our choice $\epsilon = 0.002$ falls in the middle of this plateau.}
+\caption{Sensitivity of $\Phi$ to threshold $\epsilon$ in the grid-world Bellman experiment. The shaded region indicates the robust selection range where $h^1_{\epsilon}$ is stable. Our choice $\epsilon = 0.002$ falls in the middle of this plateau.}
 \label{fig:epsilon_sensitivity}
 \end{figure}
 

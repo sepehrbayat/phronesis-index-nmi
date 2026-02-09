@@ -263,11 +263,11 @@ def inject_contradiction(stalks, center_node=12):
 
 %--------------------------------------------------
 
-\subsection{Walk-Through 2: Safety Gym (Safe RL)}
+\subsection{Walk-Through 2: Grid-World Bellman Consistency (Safe RL)}
 
 \subsubsection{Problem Description}
 
-An RL agent learns to navigate a 2D environment (Safety Gym) while avoiding hazards. The agent maintains a belief graph where vertices represent states and edges represent state transitions. Each state has an associated Q-value vector (expected rewards for each action). Bellman consistency requires that Q-values satisfy the Bellman equation across transitions.
+An RL agent learns to navigate a 2D grid-world environment while avoiding hazards. The agent maintains a belief graph where vertices represent states and edges represent state transitions. Each state has an associated Q-value vector (expected rewards for each action). Bellman consistency requires that Q-values satisfy the Bellman equation across transitions.
 
 \subsubsection{Step 1: Belief Graph}
 
@@ -548,7 +548,7 @@ START: What kind of multi-agent system do you have?
 +-- Dynamical Systems (RL/Control)
 |   +-- Stalks: State-action values or policy parameters
 |   +-- Restriction: Bellman equation or dynamics model
-|   +-- Example: Safety Gym (Q-value consistency)
+|   +-- Example: Grid-world Bellman (Q-value consistency)
 |
 +-- Hierarchical/Nested Systems
     +-- Stalks: Multi-level representations
